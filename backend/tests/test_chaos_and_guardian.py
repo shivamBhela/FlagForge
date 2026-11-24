@@ -16,6 +16,36 @@ def test_chaos_lab_telemetry_guardian_and_cleanup(client):
     assert res_seed.status_code == 200
     assert res_seed.json()["ok"] is True
 
+    # Same flag keys are valid in separate tenants; Chaos Lab must resolve only
+    # the flag belonging to the organization that owns the scenario.
+    client.post("/api/v1/auth/register", json={"email": "other.tenant@flagforge.io", "password": "Password123!", "full_name": "Other Tenant"})
+    other_token = client.post("/api/v1/auth/login", json={"email": "other.tenant@flagforge.io", "password": "Password123!"}).json()["access_token"]
+    other_headers = {"Authorization": f"Bearer {other_token}"}
+    other_org = client.post("/api/v1/organizations", json={"name": "Other Tenant Org"}, headers=other_headers).json()
+    other_project = client.post(
+        f"/api/v1/organizations/{other_org['id']}/projects",
+        json={"name": "Other Tenant Project", "slug": "other-tenant-project"},
+        headers=other_headers,
+    ).json()
+
+    import asyncio
+    import uuid
+    from conftest import TestingSessionLocal
+    from app.models.feature_flag import FeatureFlag, FeatureFlagType
+
+    async def add_same_key_to_other_tenant():
+        async with TestingSessionLocal() as session:
+            session.add(FeatureFlag(
+                project_id=uuid.UUID(other_project["id"]),
+                name="Checkout V2 from another tenant",
+                key="checkout_v2_redesign",
+                type=FeatureFlagType.FLAG,
+                default_enabled=False,
+            ))
+            await session.commit()
+
+    asyncio.run(add_same_key_to_other_tenant())
+
     # 4. Chaos Lab: List scenarios and trigger controlled run
     res_scens = client.get(f"/api/v1/organizations/{org_id}/scenarios", headers=headers)
     assert res_scens.status_code == 200
@@ -82,10 +112,6 @@ def test_chaos_lab_telemetry_guardian_and_cleanup(client):
     # 9. Chaos Lab: Interrupted run recovery verification
     from app.services.chaos_lab import ChaosLabEngine
     from app.models.chaos import SimulationRun, SimulationStatus
-    import uuid
-    import asyncio
-    from conftest import TestingSessionLocal
-
     async def simulate_orphaned():
         async with TestingSessionLocal() as session:
             orphaned_run = SimulationRun(

@@ -34,7 +34,15 @@ class ChaosLabEngine:
 
         # 1. Take initial state snapshot
         # Find feature flag in staging
-        stmt_flag = select(FeatureFlag).where(FeatureFlag.key == scenario.target_flag_key)
+        stmt_flag = (
+            select(FeatureFlag)
+            .where(
+                FeatureFlag.key == scenario.target_flag_key,
+                FeatureFlag.project.has(organization_id=self.organization_id),
+            )
+            .order_by(FeatureFlag.created_at)
+            .limit(1)
+        )
         flag = (await self.db.execute(stmt_flag)).scalar_one_or_none()
 
         pre_snapshot = {

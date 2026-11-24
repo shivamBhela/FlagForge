@@ -35,12 +35,28 @@ class ReleaseGuardianEngine:
         if policy and not policy.kill_switch_enabled:
             return False, "Automation kill switch is engaged across this organization."
 
-        stmt_flag = select(FeatureFlag).where(FeatureFlag.key == flag_key)
+        stmt_flag = (
+            select(FeatureFlag)
+            .where(
+                FeatureFlag.key == flag_key,
+                FeatureFlag.project.has(organization_id=self.organization_id),
+            )
+            .order_by(FeatureFlag.created_at)
+            .limit(1)
+        )
         flag = (await self.db.execute(stmt_flag)).scalar_one_or_none()
         if not flag:
             # Check if referenced in code scan
             from app.models.code_intelligence import FlagReference
-            stmt_ref = select(FlagReference).where(FlagReference.flag_key == flag_key)
+            stmt_ref = (
+                select(FlagReference)
+                .where(
+                    FlagReference.organization_id == self.organization_id,
+                    FlagReference.flag_key == flag_key,
+                )
+                .order_by(FlagReference.created_at)
+                .limit(1)
+            )
             ref = (await self.db.execute(stmt_ref)).scalar_one_or_none()
             if not ref:
                 return False, f"Flag '{flag_key}' not found in registry."
