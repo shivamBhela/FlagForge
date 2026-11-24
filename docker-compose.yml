@@ -1,0 +1,142 @@
+services:
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: flagforge-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${API_BASE_URL:-http://localhost:8000}
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - flagforge-net
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: flagforge-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - SECRET_KEY=${APP_SECRET_KEY:-default_secret_key_change_in_production}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-tU_hQ8z2fPj_eL7_X0v9Y4kW3rA6mB1nC5sD8eF2gH4=}
+      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://flagforge:flagforge_password@postgres:5432/flagforge}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - FLAGSMITH_BASE_URL=${FLAGSMITH_BASE_URL:-https://edge.api.flagsmith.com/api/v1}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - flagforge-net
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: flagforge-worker
+    restart: unless-stopped
+    command: ["python", "-m", "app.worker"]
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - SECRET_KEY=${APP_SECRET_KEY:-default_secret_key_change_in_production}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-tU_hQ8z2fPj_eL7_X0v9Y4kW3rA6mB1nC5sD8eF2gH4=}
+      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://flagforge:flagforge_password@postgres:5432/flagforge}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - flagforge-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: flagforge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-flagforge}
+      POSTGRES_USER: ${POSTGRES_USER:-flagforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flagforge_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flagforge} -d ${POSTGRES_DB:-flagforge}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - flagforge-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: flagforge-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - flagforge-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.100.0
+    container_name: flagforge-otel-collector
+    restart: unless-stopped
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "8889:8889" # Prometheus exporter metrics
+    networks:
+      - flagforge-net
+
+  demo-app:
+    build:
+      context: ./demo-app
+      dockerfile: Dockerfile
+    container_name: flagforge-demo-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+    depends_on:
+      api:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - flagforge-net
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  flagforge-net:
+    driver: bridge
