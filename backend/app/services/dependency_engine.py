@@ -26,6 +26,10 @@ class DependencyEngine:
         refs = (await self.db.execute(stmt)).scalars().all()
 
         created_edges = 0
+        existing_stmt = select(DependencyEdge.source_id, DependencyEdge.target_id).where(
+            DependencyEdge.organization_id == self.organization_id
+        )
+        edge_keys = set((await self.db.execute(existing_stmt)).all())
         for ref in refs:
             # Component name from file path
             comp_name = ref.file_path.split("/")[-1].split(".")[0]
@@ -62,14 +66,10 @@ class DependencyEngine:
             )
 
             for edge in (flag_comp_edge, comp_svc_edge):
-                check_stmt = select(DependencyEdge).where(
-                    DependencyEdge.organization_id == self.organization_id,
-                    DependencyEdge.source_id == edge.source_id,
-                    DependencyEdge.target_id == edge.target_id,
-                )
-                existing = (await self.db.execute(check_stmt)).scalar_one_or_none()
-                if not existing:
+                edge_key = (edge.source_id, edge.target_id)
+                if edge_key not in edge_keys:
                     self.db.add(edge)
+                    edge_keys.add(edge_key)
                     created_edges += 1
 
         await self.db.commit()

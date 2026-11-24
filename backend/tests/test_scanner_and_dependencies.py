@@ -1,4 +1,5 @@
 import pytest
+from conftest import TestingSessionLocal
 from app.services.scanner import CodeScanner
 from app.services.dependency_engine import DependencyEngine
 
@@ -35,6 +36,7 @@ def charge_card(user_id, amount):
         "frontend/src/Checkout.tsx": """
 export function Checkout() {
     const isV2 = flagsmith.hasFeature("checkout_v2_redesign");
+    const isAlsoV2 = flagsmith.hasFeature("checkout_v2_redesign");
     return isV2 ? <ModernView /> : <LegacyView />;
 }
         """,
@@ -47,24 +49,30 @@ export function Checkout() {
     assert res_scan.status_code == 200
     scan_data = res_scan.json()
     assert scan_data["status"] == "COMPLETED"
-    assert scan_data["findings_count"] == 2
+    assert scan_data["findings_count"] == 3
     assert scan_data["files_scanned"] == 2
 
     # 5. List flag references
     res_refs = client.get(f"/api/v1/organizations/{org_id}/flag-references", headers=headers)
     assert res_refs.status_code == 200
     refs = res_refs.json()
-    assert len(refs) == 2
+    assert len(refs) == 3
     found_keys = [r["flag_key"] for r in refs]
     assert "instant_refunds" in found_keys
     assert "checkout_v2_redesign" in found_keys
 
     # 6. Query dependency graph & blast radius
-    res_graph = client.get(f"/api/v1/organizations/{org_id}/graph", headers=headers)
+    # Match the production session configuration, where autoflush is disabled.
+    TestingSessionLocal.configure(autoflush=False)
+    try:
+        res_graph = client.get(f"/api/v1/organizations/{org_id}/graph", headers=headers)
+    finally:
+        TestingSessionLocal.configure(autoflush=True)
     assert res_graph.status_code == 200
     graph = res_graph.json()
     assert len(graph["nodes"]) > 0
     assert len(graph["edges"]) > 0
+    assert len({(edge["source"], edge["target"]) for edge in graph["edges"]}) == len(graph["edges"])
 
     res_blast = client.get(f"/api/v1/organizations/{org_id}/graph/blast-radius?flag_key=instant_refunds", headers=headers)
     assert res_blast.status_code == 200
