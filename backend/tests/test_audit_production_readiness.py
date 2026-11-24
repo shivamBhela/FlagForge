@@ -3,6 +3,26 @@ import pytest
 from app.core.ssrf import validate_target_url, SSRFValidationError
 from app.core.crypto import encrypt_secret, decrypt_secret
 from app.services.flagsmith_client import FlagsmithClient
+from app.core.config import Settings
+from cryptography.fernet import Fernet
+
+
+def test_production_config_rejects_known_development_secrets():
+    with pytest.raises(ValueError, match="SECRET_KEY"):
+        Settings(APP_ENV="production")
+
+    with pytest.raises(ValueError, match="ENCRYPTION_KEY"):
+        Settings(
+            APP_ENV="production",
+            SECRET_KEY="unique-production-secret-key-with-more-than-32-chars",
+        )
+
+    production = Settings(
+        APP_ENV="production",
+        SECRET_KEY="unique-production-secret-key-with-more-than-32-chars",
+        ENCRYPTION_KEY=Fernet.generate_key().decode("ascii"),
+    )
+    assert production.APP_ENV == "production"
 
 
 def test_ssrf_comprehensive_matrix():

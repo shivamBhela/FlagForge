@@ -1,5 +1,6 @@
+import base64
 from typing import List
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import AnyHttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,6 +38,27 @@ class Settings(BaseSettings):
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",") if i.strip()]
         return v
+
+    @model_validator(mode="after")
+    def require_production_secrets(self):
+        if self.APP_ENV.lower() not in {"prod", "production"}:
+            return self
+
+        known_secret_defaults = {
+            "temporary-development-secret-key-change-in-production-min32chars",
+            "default_secret_key_change_in_production",
+        }
+        if len(self.SECRET_KEY) < 32 or self.SECRET_KEY in known_secret_defaults:
+            raise ValueError("Production requires a unique SECRET_KEY of at least 32 characters.")
+
+        try:
+            encryption_key = base64.urlsafe_b64decode(self.ENCRYPTION_KEY.encode("utf-8"))
+        except Exception as exc:
+            raise ValueError("Production requires a valid Fernet ENCRYPTION_KEY.") from exc
+        if len(encryption_key) != 32 or self.ENCRYPTION_KEY == "tU_hQ8z2fPj_eL7_X0v9Y4kW3rA6mB1nC5sD8eF2gH4=":
+            raise ValueError("Production requires a unique Fernet ENCRYPTION_KEY.")
+
+        return self
 
 
 settings = Settings()

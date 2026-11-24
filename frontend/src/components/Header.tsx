@@ -9,9 +9,9 @@ export function Header() {
   const { user, organizations, currentOrg, setCurrentOrg, logout } = useAuth();
 
   return (
-    <header className="h-16 border-b border-[#1e293b] bg-[#0c121e]/80 backdrop-blur px-8 flex items-center justify-between shrink-0 sticky top-0 z-20">
+    <header className="h-16 border-b border-[#1e293b] bg-[#0c121e]/80 backdrop-blur px-4 md:px-8 flex items-center justify-between shrink-0 sticky top-0 z-20">
       {/* Search Bar & Org Selector */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         {/* Organization Switcher Dropdown */}
         {user && (
           <div className="relative group">
@@ -66,16 +66,16 @@ export function Header() {
       </div>
 
       {/* Header Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         {/* Status Indicator */}
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+        <div className="flex items-center gap-2 px-2 md:px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
           <ShieldCheck className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Tenant Isolated</span>
         </div>
 
         {/* User Profile or Login */}
         {user ? (
-          <div className="flex items-center gap-3 pl-2 border-l border-[#1e293b]">
+          <div className="flex items-center gap-2 md:gap-3 pl-2 border-l border-[#1e293b]">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-semibold text-white">
                 {user.full_name ? user.full_name.slice(0, 2).toUpperCase() : user.email.slice(0, 2).toUpperCase()}
