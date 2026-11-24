@@ -209,3 +209,9 @@ def test_webhook_signature_verification_and_processing(client, mock_flagsmith_da
         assert res_good.status_code == 200
         assert res_good.json()["ok"] is True
         assert "synchronization triggered" in res_good.json()["message"]
+
+        # 3. Replay Protection: identical webhook signature must be deduplicated
+        res_replay = client.post(f"/api/v1/webhooks/flagsmith/{conn_id}", content=payload_bytes, headers=good_headers)
+        assert res_replay.status_code == 200
+        assert res_replay.json()["ok"] is True
+        assert "replay prevention" in res_replay.json()["message"]

@@ -78,3 +78,27 @@ def test_chaos_lab_telemetry_guardian_and_cleanup(client):
     patch = res_patch.json()
     assert "--- a/src/components/Checkout.tsx" in patch["diff_preview"]
     assert patch["status"] == "DRAFT"
+
+    # 9. Chaos Lab: Interrupted run recovery verification
+    from app.services.chaos_lab import ChaosLabEngine
+    from app.models.chaos import SimulationRun, SimulationStatus
+    import uuid
+    import asyncio
+    from conftest import TestingSessionLocal
+
+    async def simulate_orphaned():
+        async with TestingSessionLocal() as session:
+            orphaned_run = SimulationRun(
+                organization_id=uuid.UUID(org_id),
+                scenario_id=uuid.UUID(scen_id),
+                status=SimulationStatus.RUNNING,
+                pre_snapshot={"flag_key": "checkout_v2_redesign", "enabled": True},
+            )
+            session.add(orphaned_run)
+            await session.commit()
+            
+            engine = ChaosLabEngine(db=session, organization_id=uuid.UUID(org_id))
+            recovered = await engine.recover_interrupted_runs()
+            assert recovered >= 1
+
+    asyncio.run(simulate_orphaned())

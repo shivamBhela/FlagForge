@@ -45,6 +45,17 @@ class ReleaseGuardianEngine:
             if not ref:
                 return False, f"Flag '{flag_key}' not found in registry."
 
+        # 3. Concurrency Protection: Prevent duplicate active rollback executions
+        stmt_active = select(RollbackAction).where(
+            RollbackAction.organization_id == self.organization_id,
+            RollbackAction.flag_key == flag_key,
+            RollbackAction.environment_name == environment_name,
+            RollbackAction.status == RollbackStatus.EXECUTING,
+        )
+        active_rb = (await self.db.execute(stmt_active)).scalar_one_or_none()
+        if active_rb:
+            return False, f"Rollback action for flag '{flag_key}' is already executing (concurrency protection)."
+
         return True, "All preconditions verified."
 
     async def execute_verified_rollback(

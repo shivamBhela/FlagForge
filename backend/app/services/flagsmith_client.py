@@ -36,7 +36,8 @@ class FlagsmithClient:
 
     async def _request(self, method: str, path: str, **kwargs) -> Any:
         url = f"{self.base_url}{path}"
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        # follow_redirects=False strictly prevents redirect-based SSRF attacks
+        async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=False) as client:
             try:
                 response = await client.request(
                     method,

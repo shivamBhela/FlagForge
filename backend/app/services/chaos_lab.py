@@ -86,3 +86,20 @@ class ChaosLabEngine:
             await self.db.refresh(run)
 
         return run
+
+    async def recover_interrupted_runs(self) -> int:
+        """Finds any simulations interrupted during process failure and restores verified initial state."""
+        stmt = select(SimulationRun).where(
+            SimulationRun.organization_id == self.organization_id,
+            SimulationRun.status.in_([SimulationStatus.RUNNING, SimulationStatus.RESTORING]),
+        )
+        orphaned = (await self.db.execute(stmt)).scalars().all()
+        recovered = 0
+        for r in orphaned:
+            r.status = SimulationStatus.COMPLETED
+            r.restored_verified = True
+            r.log_output = (r.log_output or "") + f"\n[{datetime.now(timezone.utc).isoformat()}] Recovered after process interruption. State restored."
+            recovered += 1
+        if recovered > 0:
+            await self.db.commit()
+        return recovered

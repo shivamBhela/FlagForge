@@ -54,6 +54,22 @@ class WebhookHandler:
             secret=connection.webhook_secret,
         )
 
+        if not is_valid:
+            logger.warning(f"Invalid webhook signature for connection {connection.id}")
+            return False, "Invalid webhook signature"
+
+        # 2. Replay Protection & Event Deduplication
+        if signature_header:
+            stmt_dup = select(WebhookEvent).where(
+                WebhookEvent.connection_id == connection.id,
+                WebhookEvent.signature == signature_header,
+                WebhookEvent.status == WebhookStatus.PROCESSED,
+            )
+            existing_event = (await self.db.execute(stmt_dup)).scalar_one_or_none()
+            if existing_event:
+                logger.info(f"Duplicate webhook signature received for connection {connection.id}. Skipping replay.")
+                return True, "Duplicate webhook event ignored (replay prevention)"
+
         try:
             payload_json = json.loads(payload_bytes.decode("utf-8"))
             event_type = payload_json.get("event_type") or payload_json.get("type") or "FLAG_UPDATED"
@@ -72,11 +88,7 @@ class WebhookHandler:
         self.db.add(event)
         await self.db.commit()
 
-        if not is_valid:
-            logger.warning(f"Invalid webhook signature for connection {connection.id}")
-            return False, "Invalid webhook signature"
-
-        # 2. Trigger targeted synchronization in background
+        # 3. Trigger targeted synchronization in background
         logger.info(f"Verified webhook event {event_type} received for connection {connection.id}. Initiating sync.")
         sync_engine = FlagsmithSyncEngine(db=self.db, connection=connection)
         await sync_engine.run_sync(trigger=SyncTrigger.WEBHOOK)
