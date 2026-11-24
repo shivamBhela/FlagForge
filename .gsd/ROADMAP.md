@@ -1,20 +1,25 @@
 ---
-milestone: "FlagForge Infrastructure Foundation"
-version: "0.1.0"
-updated: "2026-11-24T12:00:00Z"
+milestone: "FlagForge Application Core"
+version: "0.2.0"
+updated: "2026-11-24T18:27:00Z"
 ---
 
 # FlagForge Roadmap
 
-> **Current Phase:** 1 - Monorepo Scaffolding & Multi-Service Infrastructure
-> **Status:** planning
+> **Current Phase:** 2 - Application Core
+> **Status:** complete
 
 ## Must-Haves (from SPEC)
 
-- [ ] Monorepo workspace scaffolded with shared tooling and service boundaries
-- [ ] Docker Compose orchestrating all 7 services (`web`, `api`, `worker`, `postgres`, `redis`, `otel-collector`, `demo-app`)
-- [ ] Deep health-check endpoint (`/healthz`) on API reporting database and cache status
-- [ ] Automated one-command setup script for developer onboarding
+- [x] Monorepo workspace scaffolded with shared tooling and service boundaries
+- [x] Docker Compose orchestrating all 7 services (`web`, `api`, `worker`, `postgres`, `redis`, `otel-collector`, `demo-app`)
+- [x] Deep health-check endpoint (`/healthz`) on API reporting database and cache status
+- [x] Automated one-command setup script for developer onboarding
+- [x] Database schema migrations with Alembic and async SQLAlchemy 2.0
+- [x] Multi-tenant User, Organization, Project, and Environment models with UUIDs and UTC timestamps
+- [x] JWT Authentication with bcrypt hashing, token refresh, and logout
+- [x] Strict tenant isolation and RBAC (Owner, Admin, Developer, Viewer) verified by automated tests
+- [x] Functional frontend screens for Auth, Organization switching, Project CRUD, and Member management
 
 ---
 
@@ -30,32 +35,27 @@ updated: "2026-11-24T12:00:00Z"
 
 ---
 
-### Phase 2: Core Flag Engine & SDK
-**Status:** 🔄 In Progress
-**Objective:** Database schema migrations, flag evaluation engine, Redis caching layer, and client SDK.
+### Phase 2: Application Core (Database, Auth, Tenancy, Projects & UI)
+**Status:** ✅ Complete
+**Objective:** Database schema migrations, async SQLAlchemy 2.0 models, JWT auth, tenant isolation, RBAC, project/env management, and frontend screens.
+**Requirements:** REQ-02, NFR-02, NFR-03
 **Depends on:** Phase 1
+
+**Plans:**
+- [x] Plan 2.1: Phase 2 - Application Core (Database, Auth, Tenancy, Projects & UI)
 
 ---
 
-### Phase 3: Dashboard Web UI & Flag Management
-**Status:** ⬜ Not Started
-**Objective:** Web dashboard for feature flag creation, rollout rules, and user targeting.
+### Phase 3: Flagsmith Integration & Synchronizer
+**Status:** 🔄 Ready to Start
+**Objective:** Backend adapter for Flagsmith Management API (Cloud/self-hosted), connection tests, project/environment/flag synchronization, read-after-write verification, and secure webhook handler.
+**Requirements:** REQ-03, NFR-03
 **Depends on:** Phase 2
 
 ---
 
-### Phase 4: Observability, Analytics & Worker
+### Phase 4: Code Intelligence & Static AST Scanner
 **Status:** ⬜ Not Started
-**Objective:** OpenTelemetry distributed tracing pipeline, worker evaluation streaming, and demo-app telemetry integration.
+**Objective:** Tree-sitter / AST static scanner detecting feature-flag usage in JS/TS and Python with confidence scoring and reference tracking.
+**Requirements:** REQ-04
 **Depends on:** Phase 3
-
----
-
-## Progress Summary
-
-| Phase | Status | Plans | Complete |
-|-------|--------|-------|----------|
-| 1 | 🔄 | 0/1 | 0% |
-| 2 | ⬜ | 0/2 | 0% |
-| 3 | ⬜ | 0/2 | 0% |
-| 4 | ⬜ | 0/2 | 0% |

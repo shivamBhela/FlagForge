@@ -1,4 +1,4 @@
-﻿# FlagForge Setup & Health Verification Script for Windows PowerShell
+# FlagForge Setup & Health Verification Script for Windows PowerShell
 $ErrorActionPreference = "Stop"
 
 Write-Host "============================================================" -ForegroundColor Cyan

@@ -1,9 +1,25 @@
 # TODO.md — Active Task List
 
-## Phase 1: Monorepo Foundation & Dev Environment
-- [ ] Scaffold `backend/` directory structure with FastAPI app, config, and router
-- [ ] Scaffold `frontend/` directory structure with Next.js app, package.json, and layout
-- [ ] Create `docker-compose.yml` with api, web, postgres, redis, and otel services
-- [ ] Create `.env.example` with comprehensive documented configuration
-- [ ] Create backend tests and verify `/health` endpoint returns 200 OK
-- [ ] Create git commit for Phase 1
+## Phase 1: Monorepo Foundation & Dev Environment (✅ Complete)
+- [x] Scaffold monorepo directory structure
+- [x] Create docker-compose.yml with 7 services and healthchecks
+- [x] Create .env.example with documented configuration
+- [x] Create backend tests and verify /health and /healthz endpoints
+
+## Phase 2: Application Core (✅ Complete)
+- [x] Database Architecture: SQLAlchemy 2 async engine, pooling, base models, UUIDs, UTC timestamps
+- [x] Core Models: User, Organization, OrganizationMember (roles: OWNER, ADMIN, DEVELOPER, VIEWER), Project, Environment
+- [x] Alembic migrations setup and initial schema migration
+- [x] Authentication: Password hashing (bcrypt), JWT access/refresh tokens, registration, login, logout, refresh
+- [x] Organization Management: CRUD, member invites, role-based access control
+- [x] Project Management: CRUD scoped to organization, multi-environment support (Production, Staging, Dev)
+- [x] Tenant Isolation: Strict query scoping, cross-organization protection with automated tests
+- [x] Frontend Integration: Login, Register, Org creation/selection, Project listing/creation/settings, Member management
+- [x] Verification: Full pytest suite for auth, tenancy, project CRUD, and schema migrations
+
+## Phase 3: Flagsmith Integration & Synchronizer (🔄 Next)
+- [ ] Flagsmith Management API adapter (Cloud and self-hosted support)
+- [ ] Secret credential encryption at rest
+- [ ] Project, environment, and feature-flag synchronization
+- [ ] Read-after-write mutation verification
+- [ ] Secure webhook signature validation & async processing

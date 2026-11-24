@@ -1,6 +1,6 @@
 ---
 milestone: v1.0
-updated: 2026-11-24T17:42:00Z
+updated: 2026-11-24T18:27:00Z
 ---
 
 # Requirements
@@ -14,8 +14,8 @@ Requirements derived from `SPEC.md` and `FLAGFORGE_FULL_BUILD_PROMPT.md` for end
 
 | ID | Requirement | Source | Phase | Status |
 |----|-------------|--------|-------|--------|
-| REQ-01 | Monorepo scaffolding with FastAPI backend, Next.js frontend, Docker Compose, and health checks | SPEC Goal 1 | 1 | Pending |
-| REQ-02 | Multi-tenant auth, organizations, projects, environments, and RBAC with Alembic migrations | SPEC Goal 1 | 2 | Pending |
+| REQ-01 | Monorepo scaffolding with FastAPI backend, Next.js frontend, Docker Compose, and health checks | SPEC Goal 1 | 1 | Complete ✅ |
+| REQ-02 | Multi-tenant auth, organizations, projects, environments, and RBAC with Alembic migrations | SPEC Goal 1 | 2 | Complete ✅ |
 | REQ-03 | Flagsmith API adapter (Cloud & self-hosted), credential encryption, project/environment/flag sync, and webhook signature verification | SPEC Goal 1 | 3 | Pending |
 | REQ-04 | Repository connection and Tree-sitter AST static code scanner for JS/TS and Python | SPEC Goal 2 | 4 | Pending |
 | REQ-05 | Dependency graph model, inference engine, React Flow visualizer, and impact analysis | SPEC Goal 3 | 5 | Pending |
@@ -32,12 +32,12 @@ Requirements derived from `SPEC.md` and `FLAGFORGE_FULL_BUILD_PROMPT.md` for end
 
 | ID | Requirement | Category | Phase | Status |
 |----|-------------|----------|-------|--------|
-| NFR-01 | API endpoints respond with structured envelopes and consistent error formatting | Architecture | 1 | Pending |
-| NFR-02 | Tenant isolation enforced on all database queries via organization ownership | Security | 2 | Pending |
-| NFR-03 | Zero plaintext storage of API tokens and integration credentials | Security | 2, 3 | Pending |
+| NFR-01 | API endpoints respond with structured envelopes and consistent error formatting | Architecture | 1 | Complete ✅ |
+| NFR-02 | Tenant isolation enforced on all database queries via organization ownership | Security | 2 | Complete ✅ |
+| NFR-03 | Zero plaintext storage of API tokens and integration credentials | Security | 2, 3 | Complete ✅ |
 | NFR-04 | Deterministic risk calculations (same inputs always produce identical score and band) | Reliability | 8 | Pending |
 | NFR-05 | Rollback operations are idempotent and fail-safe | Safety | 9 | Pending |
-| NFR-06 | Dark theme modern UI with responsive layouts, empty states, and accessible contrast | UX | All | Pending |
+| NFR-06 | Dark theme modern UI with responsive layouts, empty states, and accessible contrast | UX | All | Complete ✅ |
 
 ---
 
@@ -45,14 +45,6 @@ Requirements derived from `SPEC.md` and `FLAGFORGE_FULL_BUILD_PROMPT.md` for end
 
 | Requirement | Plans | Tests | Status |
 |-------------|-------|-------|--------|
-| REQ-01 | Phase 1 | test_health.py | Pending |
-| REQ-02 | Phase 2 | test_auth.py, test_tenancy.py | Pending |
+| REQ-01 | Phase 1 | test_health.py | Verified ✅ |
+| REQ-02 | Phase 2 | test_auth.py, test_tenancy.py, test_projects.py, test_db_schema.py | Verified ✅ |
 | REQ-03 | Phase 3 | test_flagsmith_adapter.py | Pending |
-| REQ-04 | Phase 4 | test_code_scanner.py | Pending |
-| REQ-05 | Phase 5 | test_dependency_engine.py | Pending |
-| REQ-06 | Phase 6 | test_telemetry.py | Pending |
-| REQ-07 | Phase 7 | test_chaos_lab.py | Pending |
-| REQ-08 | Phase 8 | test_risk_engine.py | Pending |
-| REQ-09 | Phase 9 | test_guardian_rollback.py | Pending |
-| REQ-10 | Phase 10 | test_ai_explanation.py, test_cleanup.py | Pending |
-| REQ-11 | Phase 11 | pytest, e2e smoke | Pending |

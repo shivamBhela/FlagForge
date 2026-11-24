@@ -3,7 +3,7 @@ import {
   ShieldAlert,
   Activity,
   Layers,
-  ScanCode,
+  Code2,
   Network,
   CheckCircle2,
   AlertTriangle,
@@ -31,7 +31,7 @@ export default function OverviewPage() {
             <span>Sync Flagsmith</span>
           </button>
           <button className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white transition shadow-sm">
-            <ScanCode className="w-3.5 h-3.5" />
+            <Code2 className="w-3.5 h-3.5" />
             <span>Trigger Code Scan</span>
           </button>
         </div>
@@ -56,7 +56,7 @@ export default function OverviewPage() {
         <div className="p-5 rounded-xl bg-[#0c121e] border border-[#1e293b] shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400">
             <span className="text-xs font-semibold uppercase tracking-wider">Static Code References</span>
-            <ScanCode className="w-4 h-4 text-purple-400" />
+            <Code2 className="w-4 h-4 text-purple-400" />
           </div>
           <div className="mt-4">
             <div className="text-2xl font-bold text-white">142</div>
