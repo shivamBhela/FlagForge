@@ -47,6 +47,15 @@ class Base(DeclarativeBase):
     pass
 
 
+class UUIDMixin:
+    """Mixin adding UUID primary key."""
+    id: Mapped[uuid.UUID] = mapped_column(
+        GUID,
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+
 class TimestampMixin:
     """Mixin adding created_at and updated_at UTC timestamps."""
     created_at: Mapped[datetime] = mapped_column(

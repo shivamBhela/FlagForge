@@ -76,6 +76,33 @@ Flagsmith synchronization jobs can be triggered manually, by webhooks, or on sch
 #### Decision
 Implement `FlagsmithSyncEngine` using compound unique constraints and database lookup queries scoped to the tenant organization. For each sync run, calculate diffs (`records_created`, `records_updated`, `records_unchanged`, `records_deleted`) and persist an audit trail in `sync_history`. Prevent concurrent runs on the same connection.
 
+---
+
+### [DECISION-007] Deterministic Risk Scoring Formula
+**Date**: 2026-11-24
+**Status**: Accepted
+
+#### Context
+Safety and rollback decisions must be deterministic, auditable, and mathematically reproducible. AI models must never directly authorize or execute automated rollback actions.
+
+#### Decision
+Implement `DeterministicRiskEngine` calculating:
+`risk = 0.30*dependency_impact + 0.25*error_anomaly + 0.20*latency_anomaly + 0.15*change_criticality + 0.10*rollout_velocity`
+Combine with hard threshold checks (max error rate 5%, p95 latency 500ms). When telemetry sample size is insufficient, flag `insufficient_data` or apply explicit conservative policy.
+
+---
+
+### [DECISION-008] Chaos Lab Guaranteed Snapshot & Restoration
+**Date**: 2026-11-24
+**Status**: Accepted
+
+#### Context
+Chaos simulations in staging must never leave residual corrupt flag states or pollute downstream environments.
+
+#### Decision
+In `ChaosLabEngine`, capture a pre-change state snapshot before any mutation. Enforce a `finally` compensation block that restores the exact pre-snapshot state and performs read-after-write verification, marking `restored_verified = True`.
+
+
 
 ---
 

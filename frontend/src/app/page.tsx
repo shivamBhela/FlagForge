@@ -65,6 +65,21 @@ export default function OverviewPage() {
     }
   };
 
+  const handleSeedDemo = async () => {
+    if (!currentOrg) return;
+    setSyncing(true);
+    setSyncStatusMsg("");
+    try {
+      const res = await api.seed.seedDemo(currentOrg.id);
+      setSyncStatusMsg(res.message || "Demo data seeded successfully across all modules.");
+      await loadData();
+    } catch (err: any) {
+      setSyncStatusMsg(err.message || "Failed to seed demo data.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const activeConn = connections.length > 0 ? connections[0] : null;
   const isFlagsmithConnected = Boolean(activeConn && activeConn.status === "CONNECTED");
   const flagCount = flags.length > 0 ? flags.length : isFlagsmithConnected ? 0 : 48;
@@ -90,9 +105,13 @@ export default function OverviewPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin text-blue-400" : ""}`} />
             <span>{syncing ? "Syncing..." : isFlagsmithConnected ? "Sync Flagsmith" : "Connect Flagsmith"}</span>
           </button>
-          <button className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white transition shadow-sm">
+          <button
+            onClick={handleSeedDemo}
+            disabled={syncing}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white transition shadow-sm disabled:opacity-50"
+          >
             <Code2 className="w-3.5 h-3.5" />
-            <span>Trigger Code Scan</span>
+            <span>Seed Platform Data</span>
           </button>
         </div>
       </div>
