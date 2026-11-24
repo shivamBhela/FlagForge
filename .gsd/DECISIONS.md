@@ -54,4 +54,29 @@ Use `bcrypt` directly with 72-byte truncation safety and inject unique `jti` (UU
 
 ---
 
+### [DECISION-005] Credential Encryption and SSRF Defense
+**Date**: 2026-11-24
+**Status**: Accepted
+
+#### Context
+Management API tokens grant full administrative control over Flagsmith projects and feature flag definitions. Storing them in plaintext or accepting arbitrary user-supplied URLs creates severe security vulnerabilities, including AWS/GCP instance metadata exfiltration.
+
+#### Decision
+Use cryptography's Fernet symmetric encryption with environment-configured `ENCRYPTION_KEY` for all tokens stored at rest. Implement strict URL parsing and IP resolution in `app/core/ssrf.py`, blocking cloud metadata endpoints (`169.254.169.254`), loopbacks, RFC 1918 private subnets, and non-HTTP(S) schemes. Strip credentials from all API schemas, logs, and frontend payloads.
+
+---
+
+### [DECISION-006] Idempotent Database Synchronization Engine
+**Date**: 2026-11-24
+**Status**: Accepted
+
+#### Context
+Flagsmith synchronization jobs can be triggered manually, by webhooks, or on schedules. Multiple sync executions must never duplicate projects, environments, or flags, and must track precise change counts.
+
+#### Decision
+Implement `FlagsmithSyncEngine` using compound unique constraints and database lookup queries scoped to the tenant organization. For each sync run, calculate diffs (`records_created`, `records_updated`, `records_unchanged`, `records_deleted`) and persist an audit trail in `sync_history`. Prevent concurrent runs on the same connection.
+
+
+---
+
 *Last updated: 2026-11-24*

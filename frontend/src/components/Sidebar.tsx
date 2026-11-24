@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FolderGit2,
+  Flag,
   Code2,
   Network,
   FlaskConical,
@@ -22,6 +23,7 @@ import {
 const navigationItems = [
   { name: "Overview", href: "/", icon: LayoutDashboard },
   { name: "Projects", href: "/projects", icon: FolderGit2 },
+  { name: "Feature Flags", href: "/flags", icon: Flag },
   { name: "Code Scanner", href: "/scanner", icon: Code2 },
   { name: "Dependency Map", href: "/dependencies", icon: Network },
   { name: "Chaos Lab", href: "/chaos", icon: FlaskConical },
