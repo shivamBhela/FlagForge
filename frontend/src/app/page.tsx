@@ -82,7 +82,7 @@ export default function OverviewPage() {
 
   const activeConn = connections.length > 0 ? connections[0] : null;
   const isFlagsmithConnected = Boolean(activeConn && activeConn.status === "CONNECTED");
-  const flagCount = flags.length > 0 ? flags.length : isFlagsmithConnected ? 0 : 48;
+  const flagCount = flags.filter((flag) => Boolean(flag.flagsmith_feature_id)).length;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -93,7 +93,7 @@ export default function OverviewPage() {
             Mission Control Overview {currentOrg ? `— ${currentOrg.name}` : ""}
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Real-time feature release safety, Flagsmith synchronization status, and live blast-radius monitoring.
+            Flagsmith synchronization, code dependencies, and release risk. Demo data is identified separately from provider data.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -103,7 +103,7 @@ export default function OverviewPage() {
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-[#151e2e] border border-[#1e293b] text-xs font-medium text-slate-300 hover:text-white hover:bg-[#1f2937] transition disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin text-blue-400" : ""}`} />
-            <span>{syncing ? "Syncing..." : isFlagsmithConnected ? "Sync Flagsmith" : "Connect Flagsmith"}</span>
+            <span>{syncing ? "Working..." : isFlagsmithConnected ? "Sync Flagsmith" : "Connect Flagsmith"}</span>
           </button>
           <button
             onClick={handleSeedDemo}
@@ -111,7 +111,7 @@ export default function OverviewPage() {
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white transition shadow-sm disabled:opacity-50"
           >
             <Code2 className="w-3.5 h-3.5" />
-            <span>Seed Platform Data</span>
+            <span>Seed Synthetic Demo Data</span>
           </button>
         </div>
       </div>
@@ -132,9 +132,9 @@ export default function OverviewPage() {
           </div>
           <div className="mt-4">
             <div className="text-2xl font-bold text-white">{flagCount}</div>
-            <div className="text-xs text-emerald-400 flex items-center gap-1 mt-1 font-medium">
-              <CheckCircle2 className="w-3 h-3" />
-              <span>{isFlagsmithConnected ? "Reconciled with Flagsmith" : "Ready for synchronization"}</span>
+            <div className={`text-xs flex items-center gap-1 mt-1 font-medium ${isFlagsmithConnected ? "text-emerald-400" : "text-amber-400"}`}>
+              {isFlagsmithConnected ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+              <span>{isFlagsmithConnected ? "Connection reports connected" : "No live connection"}</span>
             </div>
           </div>
         </Link>
@@ -145,9 +145,9 @@ export default function OverviewPage() {
             <Code2 className="w-4 h-4 text-purple-400" />
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-bold text-white">142</div>
+            <div className="text-2xl font-bold text-white">—</div>
             <div className="text-xs text-slate-400 flex items-center gap-1 mt-1">
-              <span>Across 2 repositories (TS & Python)</span>
+              <span>Scan data is not loaded on this overview</span>
             </div>
           </div>
         </div>
@@ -158,9 +158,9 @@ export default function OverviewPage() {
             <ShieldAlert className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-bold text-emerald-400">LOW (18/100)</div>
+            <div className="text-2xl font-bold text-slate-300">Not evaluated</div>
             <div className="text-xs text-slate-400 mt-1">
-              All rollout policies within thresholds
+              Run an evaluation in Release Guardian
             </div>
           </div>
         </div>
@@ -171,9 +171,9 @@ export default function OverviewPage() {
             <Activity className="w-4 h-4 text-blue-400" />
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-bold text-white">AUTOMATIC</div>
-            <div className="text-xs text-emerald-400 mt-1">
-              Verified rollback armed
+            <div className="text-2xl font-bold text-slate-300">Policy controlled</div>
+            <div className="text-xs text-slate-400 mt-1">
+              No rollback is active
             </div>
           </div>
         </div>
@@ -207,7 +207,9 @@ export default function OverviewPage() {
                     <div className="flex items-center gap-6">
                       <div className="text-right">
                         <span className="text-xs font-medium text-slate-300">Flagsmith ID: {flag.flagsmith_feature_id || "Local"}</span>
-                        <p className="text-[10px] text-emerald-400">Synchronized</p>
+                        <p className={`text-[10px] ${flag.flagsmith_feature_id ? "text-emerald-400" : "text-amber-400"}`}>
+                          {flag.flagsmith_feature_id ? "Synchronized from Flagsmith" : "Local/demo record"}
+                        </p>
                       </div>
                       <span className="text-[11px] text-slate-500 font-mono">
                         {new Date(flag.updated_at || flag.created_at).toLocaleDateString()}
@@ -216,57 +218,9 @@ export default function OverviewPage() {
                   </div>
                 ))
               ) : (
-                [
-                  {
-                    name: "checkout_v2_redesign",
-                    repo: "web-storefront",
-                    traffic: "25%",
-                    risk: 22,
-                    status: "Healthy",
-                    updated: "10m ago",
-                  },
-                  {
-                    name: "stripe_payment_element",
-                    repo: "payments-api",
-                    traffic: "50%",
-                    risk: 14,
-                    status: "Healthy",
-                    updated: "1h ago",
-                  },
-                  {
-                    name: "recommendations_ai_engine",
-                    repo: "recs-service",
-                    traffic: "10%",
-                    risk: 38,
-                    status: "Monitoring",
-                    updated: "3h ago",
-                  },
-                  {
-                    name: "graphql_batch_queries",
-                    repo: "api-gateway",
-                    traffic: "100%",
-                    risk: 5,
-                    status: "Stable",
-                    updated: "1d ago",
-                  },
-                ].map((flag) => (
-                  <div key={flag.name} className="py-3.5 flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                      <div>
-                        <p className="font-mono text-xs font-medium text-slate-200">{flag.name}</p>
-                        <p className="text-[11px] text-slate-400">{flag.repo} • Rollout {flag.traffic}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <span className="text-xs font-medium text-slate-300">Risk Score {flag.risk}</span>
-                        <p className="text-[10px] text-emerald-400">{flag.status}</p>
-                      </div>
-                      <span className="text-[11px] text-slate-500 font-mono">{flag.updated}</span>
-                    </div>
-                  </div>
-                ))
+                <div className="py-8 text-center text-xs text-slate-400">
+                  No synchronized Flagsmith flags are available. Connect an instance or seed clearly labelled demo data.
+                </div>
               )}
             </div>
           </div>
@@ -292,17 +246,17 @@ export default function OverviewPage() {
               </div>
               <div className="h-8 w-px bg-[#1e293b]"></div>
               <div>
-                <p className="text-lg font-bold text-white">96</p>
+                <p className="text-lg font-bold text-white">—</p>
                 <p className="text-slate-400 text-[11px]">Component Nodes</p>
               </div>
               <div className="h-8 w-px bg-[#1e293b]"></div>
               <div>
-                <p className="text-lg font-bold text-white">124</p>
+                <p className="text-lg font-bold text-white">—</p>
                 <p className="text-slate-400 text-[11px]">Inferred Edges</p>
               </div>
               <div className="h-8 w-px bg-[#1e293b]"></div>
               <div>
-                <p className="text-lg font-bold text-emerald-400">0</p>
+                <p className="text-lg font-bold text-slate-300">—</p>
                 <p className="text-slate-400 text-[11px]">Circular Dep Warnings</p>
               </div>
             </div>
@@ -319,17 +273,17 @@ export default function OverviewPage() {
             </h2>
             <div className="space-y-3 text-xs">
               {[
-                { name: "Pre-change Snapshots Valid", status: "Verified", ok: true },
-                { name: "Zero Conflicting Remote Edits", status: "Clean", ok: true },
-                { name: "OTel Attribution Telemetry", status: "Emitting", ok: true },
-                { name: "Distributed Lock Available", status: "Redis Ready", ok: true },
-                { name: "Read-After-Write Mutation Verification", status: "Enforced", ok: true },
-                { name: "Automated Kill-Switch", status: "Standby", ok: true },
+                { name: "Pre-change snapshot", status: "Checked per operation", ok: false },
+                { name: "Remote edit conflict", status: "Checked per operation", ok: false },
+                { name: "Telemetry sample", status: "Checked per evaluation", ok: false },
+                { name: "Redis lock", status: "Not probed here", ok: false },
+                { name: "Read-after-write verification", status: "Checked per operation", ok: false },
+                { name: "Automation kill switch", status: "Policy dependent", ok: false },
               ].map((item) => (
                 <div key={item.name} className="flex items-center justify-between py-1.5 border-b border-[#1e293b]/60 last:border-0">
                   <span className="text-slate-300">{item.name}</span>
-                  <span className="font-mono text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
+                  <span className={`font-mono flex items-center gap-1 ${item.ok ? "text-emerald-400" : "text-amber-400"}`}>
+                    {item.ok ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
                     {item.status}
                   </span>
                 </div>
@@ -346,7 +300,7 @@ export default function OverviewPage() {
               </Link>
             </div>
             <p className="text-xs text-slate-400 mb-4">
-              FlagForge connects to your Flagsmith instance, GitHub repositories, and OpenTelemetry collector.
+              Flagsmith synchronization and telemetry ingestion are available. GitHub PR creation is not configured in this build.
             </p>
             <div className="space-y-2.5 text-xs">
               <div className="p-2.5 rounded-lg bg-[#151e2e] border border-[#1e293b] flex items-center justify-between">
@@ -357,11 +311,11 @@ export default function OverviewPage() {
               </div>
               <div className="p-2.5 rounded-lg bg-[#151e2e] border border-[#1e293b] flex items-center justify-between">
                 <span className="text-slate-300">OpenTelemetry Collector</span>
-                <span className="text-emerald-400 font-medium">Ready (:4318)</span>
+                <span className="text-amber-400 font-medium">Configured, not probed</span>
               </div>
               <div className="p-2.5 rounded-lg bg-[#151e2e] border border-[#1e293b] flex items-center justify-between">
                 <span className="text-slate-300">Chaos Lab Sandbox</span>
-                <span className="text-blue-400 font-medium">Isolated</span>
+                <span className="text-blue-400 font-medium">Simulation only</span>
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@ import uuid
 from typing import Annotated
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.organization import OrganizationMember
@@ -22,16 +23,30 @@ async def seed_demo_data(
     membership: Annotated[OrganizationMember, Depends(require_org_member)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    """Populates complete demo fixtures across Scanner, Dependencies, Chaos Lab, Telemetry, and Guardian."""
+    """Populates synthetic local fixtures; it does not connect to external providers."""
     # 1. Create Project & Feature Flags
     from app.models.project import Project
     from app.models.feature_flag import FeatureFlag, FeatureFlagType
+
+    existing_project = (await db.execute(
+        select(Project).where(
+            Project.organization_id == org_id,
+            Project.slug == "storefront-app",
+        )
+    )).scalar_one_or_none()
+    if existing_project:
+        return {
+            "ok": True,
+            "demo": True,
+            "already_seeded": True,
+            "message": "Synthetic demo fixtures already exist; no duplicate data was created.",
+        }
 
     proj = Project(
         organization_id=org_id,
         name="Storefront App",
         slug="storefront-app",
-        description="Demo e-commerce storefront",
+        description="Synthetic demo e-commerce storefront; not linked to Flagsmith or GitHub.",
     )
     db.add(proj)
     await db.flush()
@@ -59,7 +74,7 @@ async def seed_demo_data(
         organization_id=org_id,
         project_id=proj.id,
         name="web-storefront",
-        repo_url="https://github.com/cloudcorp/web-storefront",
+        repo_url="https://example.invalid/flagforge/demo-web-storefront",
         default_branch="main",
         language="typescript",
     )
@@ -116,4 +131,9 @@ async def seed_demo_data(
     ])
 
     await db.commit()
-    return {"ok": True, "message": "Demo fixtures seeded successfully across all modules."}
+    return {
+        "ok": True,
+        "demo": True,
+        "already_seeded": False,
+        "message": "Synthetic demo fixtures seeded locally. No provider data or external service was used.",
+    }

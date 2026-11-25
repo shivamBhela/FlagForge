@@ -14,8 +14,8 @@ logger = logging.getLogger("webhook-receiver")
 def verify_webhook_signature(payload_bytes: bytes, signature_header: Optional[str], secret: Optional[str]) -> bool:
     """Verifies HMAC-SHA256 signature of a webhook payload against a shared secret."""
     if not secret:
-        # If no secret was configured for this connection, allow or check if signature not required
-        return True
+        # Never accept an unsigned provider event just because setup is incomplete.
+        return False
 
     if not signature_header:
         return False

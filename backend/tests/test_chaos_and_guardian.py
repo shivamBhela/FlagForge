@@ -15,6 +15,10 @@ def test_chaos_lab_telemetry_guardian_and_cleanup(client):
     res_seed = client.post(f"/api/v1/organizations/{org_id}/seed-demo", headers=headers)
     assert res_seed.status_code == 200
     assert res_seed.json()["ok"] is True
+    assert res_seed.json()["demo"] is True
+    res_seed_repeat = client.post(f"/api/v1/organizations/{org_id}/seed-demo", headers=headers)
+    assert res_seed_repeat.status_code == 200
+    assert res_seed_repeat.json()["already_seeded"] is True
 
     # Same flag keys are valid in separate tenants; Chaos Lab must resolve only
     # the flag belonging to the organization that owns the scenario.
@@ -57,8 +61,9 @@ def test_chaos_lab_telemetry_guardian_and_cleanup(client):
     assert res_run.status_code == 200
     run_data = res_run.json()
     assert run_data["status"] == "COMPLETED"
-    assert run_data["restored_verified"] is True
-    assert "State restoration VERIFIED" in run_data["log_output"]
+    assert run_data["restored_verified"] is False
+    assert "no remote flag was changed" in run_data["log_output"]
+    assert run_data["pre_snapshot"]["simulation_mode"] == "SYNTHETIC_NO_REMOTE_MUTATION"
 
     # 5. Deterministic Risk Evaluation
     res_risk = client.post(
@@ -72,16 +77,26 @@ def test_chaos_lab_telemetry_guardian_and_cleanup(client):
     assert risk["dependency_score"] >= 0.0
     assert risk["error_anomaly_score"] >= 0.0
 
+    # Missing telemetry is uncertain, never interpreted as a healthy release.
+    res_no_telemetry = client.post(
+        f"/api/v1/organizations/{org_id}/guardian/evaluate?flag_key=flag_without_telemetry&environment_name=staging",
+        headers=headers,
+    )
+    assert res_no_telemetry.status_code == 200
+    no_telemetry = res_no_telemetry.json()
+    assert no_telemetry["factors"]["telemetry_confidence"] == "INSUFFICIENT"
+    assert no_telemetry["error_anomaly_score"] == 100.0
+    assert no_telemetry["latency_anomaly_score"] == 100.0
+    assert no_telemetry["recommended_action"] == "MANUAL_APPROVAL_REQUIRED"
+
     # 6. Release Guardian Rollback
     res_rb = client.post(
         f"/api/v1/organizations/{org_id}/guardian/rollback",
         json={"flag_key": "checkout_v2_redesign", "environment_name": "production", "reason": "Test safety breach"},
         headers=headers,
     )
-    assert res_rb.status_code == 200
-    rb_data = res_rb.json()
-    assert rb_data["status"] == "VERIFIED"
-    assert rb_data["verified_state"]["enabled"] is False
+    assert res_rb.status_code == 501
+    assert "No change was made" in res_rb.json()["detail"]
 
     # 7. Incident Explanation
     res_expl = client.get(

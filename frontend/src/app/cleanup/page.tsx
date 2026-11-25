@@ -6,10 +6,7 @@ import { api } from "@/lib/api";
 import {
   Sparkles,
   GitPullRequest,
-  CheckCircle2,
-  AlertTriangle,
   FileCode,
-  ExternalLink,
 } from "lucide-react";
 
 export default function CleanupStudioPage() {
@@ -18,7 +15,6 @@ export default function CleanupStudioPage() {
   const [patches, setPatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewPatch, setPreviewPatch] = useState<any | null>(null);
-  const [successMsg, setSuccessMsg] = useState("");
 
   const loadData = async () => {
     if (!currentOrg) return;
@@ -55,17 +51,6 @@ export default function CleanupStudioPage() {
     }
   };
 
-  const handleCreatePR = async (patchId: string) => {
-    if (!currentOrg) return;
-    try {
-      const res = await api.cleanup.createPR(currentOrg.id, patchId);
-      setSuccessMsg(`GitHub Pull Request created: ${res.pr_url}`);
-      await loadData();
-    } catch (e: any) {
-      alert(e.message || "Failed to create PR");
-    }
-  };
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -76,17 +61,10 @@ export default function CleanupStudioPage() {
             <span>Cleanup Studio — Technical Debt Elimination</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Detect stale and dead feature flags, generate AST-safe patch previews, and open reviewed GitHub PRs.
+            Detect stale flags and create a human-reviewed local diff proposal. GitHub PR creation is not configured.
           </p>
         </div>
       </div>
-
-      {successMsg && (
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{successMsg}</span>
-        </div>
-      )}
 
       {/* Stale Candidates Grid */}
       <div className="space-y-4">
@@ -131,12 +109,7 @@ export default function CleanupStudioPage() {
               <GitPullRequest className="w-4 h-4 text-blue-400" />
               <span>Unified Diff Preview — {previewPatch.file_path}</span>
             </h3>
-            <button
-              onClick={() => handleCreatePR(previewPatch.id)}
-              className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-medium text-white transition shadow-sm"
-            >
-              Open GitHub PR
-            </button>
+            <span className="text-[11px] text-amber-400">GitHub App integration not configured</span>
           </div>
           <pre className="p-4 rounded-xl bg-[#151e2e] border border-[#1e293b] text-xs font-mono text-emerald-300 overflow-x-auto">
             {previewPatch.diff_preview}

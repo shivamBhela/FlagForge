@@ -29,7 +29,7 @@ services:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY:-tU_hQ8z2fPj_eL7_X0v9Y4kW3rA6mB1nC5sD8eF2gH4=}
       - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://flagforge:flagforge_password@postgres:5432/flagforge}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - FLAGSMITH_BASE_URL=${FLAGSMITH_BASE_URL:-https://edge.api.flagsmith.com/api/v1}
+      - FLAGSMITH_BASE_URL=${FLAGSMITH_BASE_URL:-https://api.flagsmith.com/api/v1}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
     depends_on:
       postgres:
@@ -37,7 +37,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -9,21 +9,20 @@ from app.models.chaos import (
     SimulationRun,
     SimulationStatus,
 )
-from app.models.flagsmith import FlagsmithConnection
-from app.models.feature_flag import FeatureFlag, FeatureFlagState
+from app.models.feature_flag import FeatureFlag
 
 logger = logging.getLogger("chaos-lab")
 
 
 class ChaosLabEngine:
-    """Orchestrates safe, isolated feature-flag simulations in staging with guaranteed snapshot restoration."""
+    """Runs synthetic staging simulations without mutating remote flags or generating load."""
 
     def __init__(self, db: AsyncSession, organization_id: uuid.UUID):
         self.db = db
         self.organization_id = organization_id
 
     async def run_scenario(self, scenario_id: uuid.UUID) -> SimulationRun:
-        """Executes a controlled simulation: captures snapshot, mutates state, tests, and verifies restoration."""
+        """Records a synthetic scenario; no provider state or application traffic is changed."""
         stmt_scen = select(SimulationScenario).where(
             SimulationScenario.id == scenario_id,
             SimulationScenario.organization_id == self.organization_id,
@@ -49,6 +48,7 @@ class ChaosLabEngine:
             "flag_key": scenario.target_flag_key,
             "environment": scenario.environment_name,
             "default_enabled": flag.default_enabled if flag else False,
+            "simulation_mode": "SYNTHETIC_NO_REMOTE_MUTATION",
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -65,31 +65,25 @@ class ChaosLabEngine:
         await self.db.refresh(run)
 
         try:
-            # 2. Simulate traffic and scenario impact
-            # In a real environment, this sends load to staging service and measures OTel metrics
+            # Produce deterministic sample values for the UI; no traffic is sent.
             simulated_error_rate = 0.048 if scenario.scenario_type == "CASCADE_FAILURE" else 0.015
             simulated_p95 = 385.0 if scenario.scenario_type == "CASCADE_FAILURE" else 180.0
 
             run.simulated_error_rate = simulated_error_rate
             run.simulated_p95_ms = simulated_p95
             run.log_output = (
-                f"[{datetime.now(timezone.utc).isoformat()}] Snapshot captured: {pre_snapshot}\n"
-                f"[{datetime.now(timezone.utc).isoformat()}] Injected scenario: {scenario.scenario_type} on {scenario.target_flag_key}\n"
-                f"[{datetime.now(timezone.utc).isoformat()}] Traffic generation: {scenario.test_traffic_rate} req/s for {scenario.duration_seconds}s\n"
+                f"[{datetime.now(timezone.utc).isoformat()}] Synthetic local snapshot recorded: {pre_snapshot}\n"
+                f"[{datetime.now(timezone.utc).isoformat()}] Synthetic scenario: {scenario.scenario_type} on {scenario.target_flag_key}\n"
+                f"[{datetime.now(timezone.utc).isoformat()}] No load was sent and no remote flag was changed. Configured rate/duration are illustrative only.\n"
                 f"[{datetime.now(timezone.utc).isoformat()}] Metric shift: error rate {run.baseline_error_rate*100:.1f}% -> {simulated_error_rate*100:.1f}%\n"
             )
 
         finally:
-            # 3. GUARANTEED COMPENSATION / RESTORATION
-            # Regardless of success or failure, the pre-snapshot state MUST be restored and verified!
-            run.status = SimulationStatus.RESTORING
-            await self.db.commit()
-
-            # Verify restoration
-            restored = True
-            run.restored_verified = restored
+            # A synthetic-only run has nothing to restore; do not claim a remote
+            # restoration verification that did not take place.
+            run.restored_verified = False
             run.status = SimulationStatus.COMPLETED
-            run.log_output += f"[{datetime.now(timezone.utc).isoformat()}] State restoration VERIFIED. Initial snapshot restored."
+            run.log_output += f"[{datetime.now(timezone.utc).isoformat()}] Synthetic run completed. No remote state change occurred; restoration was not performed."
             await self.db.commit()
             await self.db.refresh(run)
 
@@ -104,9 +98,9 @@ class ChaosLabEngine:
         orphaned = (await self.db.execute(stmt)).scalars().all()
         recovered = 0
         for r in orphaned:
-            r.status = SimulationStatus.COMPLETED
-            r.restored_verified = True
-            r.log_output = (r.log_output or "") + f"\n[{datetime.now(timezone.utc).isoformat()}] Recovered after process interruption. State restored."
+            r.status = SimulationStatus.FAILED
+            r.restored_verified = False
+            r.log_output = (r.log_output or "") + f"\n[{datetime.now(timezone.utc).isoformat()}] Synthetic run interrupted. No remote state change occurred; restoration was not performed."
             recovered += 1
         if recovered > 0:
             await self.db.commit()

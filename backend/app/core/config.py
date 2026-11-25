@@ -29,7 +29,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./flagforge.db"
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    FLAGSMITH_BASE_URL: str = "https://edge.api.flagsmith.com/api/v1"
+    # Management API host (the edge.api.flagsmith.com host serves SDK evaluations).
+    FLAGSMITH_BASE_URL: str = "https://api.flagsmith.com/api/v1"
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4318"
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")

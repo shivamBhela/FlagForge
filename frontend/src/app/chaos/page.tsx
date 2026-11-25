@@ -47,8 +47,8 @@ export default function ChaosLabPage() {
     setError("");
     setSuccessMsg("");
     try {
-      const run = await api.chaos.runScenario(currentOrg.id, scenarioId);
-      setSuccessMsg(`Simulation completed! Initial state snapshot verified and restored.`);
+      await api.chaos.runScenario(currentOrg.id, scenarioId);
+      setSuccessMsg(`Synthetic staging simulation completed. No load was sent and no remote flag changed.`);
       await loadData();
     } catch (err: any) {
       setError(err.message || "Simulation failed.");
@@ -67,7 +67,7 @@ export default function ChaosLabPage() {
             <span>Chaos Lab — Controlled Staging Sandbox</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Simulate flag failure modes in staging environments with guaranteed snapshot capture & verified restoration.
+            Synthetic examples only: no application load is sent and no Flagsmith state is changed or restored.
           </p>
         </div>
 
@@ -130,7 +130,7 @@ export default function ChaosLabPage() {
                   className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white transition shadow-sm disabled:opacity-50"
                 >
                   <Play className={`w-3.5 h-3.5 ${runningId === scen.id ? "animate-spin" : ""}`} />
-                  <span>{runningId === scen.id ? "Executing & Restoring..." : "Run Chaos Test"}</span>
+                  <span>{runningId === scen.id ? "Running synthetic simulation..." : "Run Synthetic Test"}</span>
                 </button>
               </div>
             ))}
@@ -142,7 +142,7 @@ export default function ChaosLabPage() {
       <div className="p-6 rounded-xl bg-[#0c121e] border border-[#1e293b] space-y-4">
         <h2 className="text-base font-bold text-white flex items-center gap-2">
           <Clock className="w-4 h-4 text-blue-400" />
-          <span>Simulation Runs & Compensation Audit ({runs.length})</span>
+          <span>Synthetic Simulation Runs ({runs.length})</span>
         </h2>
 
         {runs.length === 0 ? (
@@ -157,7 +157,7 @@ export default function ChaosLabPage() {
                       {r.status}
                     </span>
                     <span className="text-slate-300 font-mono font-bold">
-                      {r.restored_verified ? "Guaranteed Restoration Verified ✅" : "Pending"}
+                  {r.restored_verified ? "External Restoration Verified" : "Synthetic only — no restoration performed"}
                     </span>
                   </div>
                   <span className="text-[11px] text-slate-400 font-mono">{new Date(r.created_at).toLocaleString()}</span>
@@ -165,19 +165,19 @@ export default function ChaosLabPage() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center p-2 rounded bg-[#0c121e] border border-[#1e293b] font-mono text-[11px]">
                   <div>
-                    <div className="text-slate-400">Baseline Err</div>
+                    <div className="text-slate-400">Synthetic baseline err</div>
                     <div className="text-emerald-400 font-bold">{(r.baseline_error_rate * 100).toFixed(1)}%</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">Injected Err</div>
+                    <div className="text-slate-400">Synthetic scenario err</div>
                     <div className="text-rose-400 font-bold">{(r.simulated_error_rate * 100).toFixed(1)}%</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">Baseline p95</div>
+                    <div className="text-slate-400">Synthetic baseline p95</div>
                     <div className="text-emerald-400 font-bold">{r.baseline_p95_ms}ms</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">Injected p95</div>
+                    <div className="text-slate-400">Synthetic scenario p95</div>
                     <div className="text-amber-400 font-bold">{r.simulated_p95_ms}ms</div>
                   </div>
                 </div>

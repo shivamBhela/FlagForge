@@ -5,7 +5,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("flagforge-worker")
 
 def main():
-    logger.info("FlagForge Background Worker started. Listening for release evaluations & scan jobs...")
+    logger.warning("FlagForge worker placeholder started; Redis job consumption is not implemented and no jobs will be processed.")
     try:
         while True:
             time.sleep(5)

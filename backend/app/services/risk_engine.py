@@ -62,10 +62,15 @@ class DeterministicRiskEngine:
         telem_pipe = TelemetryPipeline(self.db, self.organization_id)
         telem = await telem_pipe.get_metrics_for_flag(flag_key, environment_name)
 
-        if not telem["has_telemetry"] or telem["total_requests"] < policy.min_telemetry_samples:
-            # Check if there are sufficient samples or if we must flag insufficient data
-            err_anomaly = 20.0
-            lat_anomaly = 15.0
+        telemetry_sufficient = (
+            telem["has_telemetry"]
+            and telem["total_requests"] >= policy.min_telemetry_samples
+        )
+        if not telemetry_sufficient:
+            # Unknown production behavior is not evidence of health. Keep the
+            # score deterministic and conservative, and require manual review.
+            err_anomaly = 100.0
+            lat_anomaly = 100.0
         else:
             # Error rate anomaly: 0% = 0, 5% = 100
             err_anomaly = min(100.0, (telem["avg_error_rate"] / policy.max_error_rate_threshold) * 100.0)
@@ -101,6 +106,9 @@ class DeterministicRiskEngine:
             band = RiskBand.CRITICAL
             action = "TRIGGER_AUTOMATED_ROLLBACK"
 
+        if not telemetry_sufficient:
+            action = "MANUAL_APPROVAL_REQUIRED"
+
         assessment = RiskAssessment(
             organization_id=self.organization_id,
             project_id=project_id,
@@ -118,6 +126,9 @@ class DeterministicRiskEngine:
                 "error_rate": telem.get("avg_error_rate", 0.0),
                 "p95_ms": telem.get("avg_p95_ms", 0.0),
                 "policy_mode": policy.mode.value,
+                "telemetry_confidence": "SUFFICIENT" if telemetry_sufficient else "INSUFFICIENT",
+                "telemetry_request_count": telem.get("total_requests", 0),
+                "telemetry_window_count": telem.get("samples_count", 0),
             },
             recommended_action=action,
         )

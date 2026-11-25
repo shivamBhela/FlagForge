@@ -1,121 +1,61 @@
-# FlagForge — Feature-Release Intelligence & Safety Platform
+# FlagForge
 
-FlagForge is a production-minded, developer-friendly feature-release intelligence and reliability platform built around a real **Flagsmith** integration.
+FlagForge is a feature flag release management prototype built with Next.js, FastAPI, SQLAlchemy/Alembic, PostgreSQL, and Redis. It includes organization/project management, a code scanner, dependency graph, risk evaluation, synthetic Chaos Lab, telemetry aggregation, Flagsmith Management API synchronization, and cleanup diff previews.
 
-It connects source-code intelligence, feature-flag management, relational dependency analysis, controlled release simulation, OpenTelemetry runtime observability, and policy-governed automated recovery.
+## Current verification status
 
----
+This repository has been exercised locally with SQLite, mocked Flagsmith API responses, and headed Chromium. The full backend suite and frontend type check pass. Docker services and live Flagsmith connectivity were not verified in this environment: the Docker Desktop engine was unavailable and no Flagsmith credentials were configured. The worker is a placeholder, OpenTelemetry is not wired end-to-end into FlagForge, GitHub PR creation is unavailable, and remote rollback is disabled. See [`docs/FINAL_COMPETITION_READINESS_REPORT.md`](docs/FINAL_COMPETITION_READINESS_REPORT.md) for evidence and limitations.
 
-## Architecture Overview
+## Local development
 
-```
-                                      ┌─────────────────────────────────┐
-                                      │        Next.js Dashboard        │
-                                      │  (Overview, Graph, Chaos, etc.) │
-                                      └────────────────┬────────────────┘
-                                                       │ REST / JSON
-                                                       ▼
-┌──────────────────────┐              ┌─────────────────────────────────┐
-│   Flagsmith Remote   │◄────────────►│       FastAPI Core API          │
-│   (Cloud / Cluster)  │  HTTPS       │  (Auth, Scans, Risk, Guardian)  │
-└──────────────────────┘              └────┬───────────┬───────────┬────┘
-                                           │           │           │
-                     ┌─────────────────────┘           │           └────────────────────┐
-                     ▼                                 ▼                                ▼
-       ┌───────────────────────────┐     ┌───────────────────────────┐    ┌───────────────────────────┐
-       │   PostgreSQL 16 Storage   │     │    Redis Distributed      │    │  OpenTelemetry Collector  │
-       │ (Multi-tenant, Migrations)│     │  (Locks, Celery / Queue)  │    │     (:4317 / :4318)       │
-       └───────────────────────────┘     └───────────────────────────┘    └───────────────────────────┘
-```
+Prerequisites: Python 3.11+, Node.js 18+, and Docker Compose for the full PostgreSQL/Redis stack. Copy `.env.example` to `.env` and replace development secrets before using data that matters. Never use the sample values in production.
 
----
-
-## Core Product Capabilities
-
-1. **Flagsmith Integration & Synchronization**:
-   - Compatible with Flagsmith Cloud (`https://edge.api.flagsmith.com/api/v1`) and self-hosted instances.
-   - 256-bit Fernet credential encryption at rest. Never leaks tokens to frontend or logs.
-   - SSRF protection strictly blocking loopbacks and cloud metadata endpoints (`169.254.169.254`).
-   - Idempotent database synchronization with change diff tracking (`records_created`, `records_updated`, `records_unchanged`).
-   - Secure HMAC-SHA256 webhook receiver for real-time reconciliation.
-
-2. **Code Intelligence & AST Scanner (`/scanner`)**:
-   - Python AST visitor and TypeScript/JavaScript regex/lexer engine detecting feature flag calls.
-   - Symbol/scope identification, confidence scoring, and evidence snippet capture.
-   - Matches detected flag references against the authoritative Flagsmith registry.
-
-3. **Dependency Graph Engine (`/dependencies`)**:
-   - Multi-tier relationship mapping (Flag ➔ Component ➔ Service ➔ API).
-   - Inferred, explicit, and manual edges with confidence scoring.
-   - Real-time downstream **Blast Radius** impact calculation (0–100 scale).
-
-4. **Chaos Lab Sandbox (`/chaos`)**:
-   - Safe simulation of flag failures exclusively in staging environments.
-   - Captures pre-change snapshot, applies scenario load, and enforces **guaranteed restoration** with read-after-write verification.
-
-5. **Runtime Observability & Live Monitor (`/monitor`)**:
-   - Ingests traces and metrics attributed to feature flags via OpenTelemetry.
-   - Computes request rates, error anomalies, and p50/p95/p99 latency percentiles over 5-minute rolling windows.
-
-6. **Deterministic Risk Engine & Release Guardian (`/guardian`, `/policies`)**:
-   - Deterministic mathematical risk scoring:
-     $$\text{Risk} = 0.30 \times \text{DepImpact} + 0.25 \times \text{ErrorAnomaly} + 0.20 \times \text{LatencyAnomaly} + 0.15 \times \text{Criticality} + 0.10 \times \text{Velocity}$$
-   - Configurable risk bands: Low (0–29), Moderate (30–49), High (50–74), Critical (75–100).
-   - Policy-driven automated rollback with pre-condition safety checks, distributed locks, and state verification.
-
-7. **Incident Response & Hybrid Explanation (`/incidents`)**:
-   - Post-mortem audit trail, verified rollback records, and transparent root-cause explanations with a deterministic NO-AI fallback.
-
-8. **Cleanup Studio (`/cleanup`)**:
-   - Stale/dead flag identification and unified diff patch preview generator for technical debt elimination.
-
----
-
-## Quick Start (Development)
-
-### 1. Prerequisites
-- Python 3.11+
-- Node.js 18+
-- Docker & Docker Compose
-
-### 2. Backend Setup
 ```powershell
-# Set up environment
-cp .env.example .env
-
-# Install backend dependencies
-cd backend
-pip install -r requirements.txt
-
-# Run migrations
-alembic upgrade head
-
-# Run development server
-uvicorn app.main:app --reload --port 8000
+docker compose up --build -d
+docker compose ps
 ```
 
-### 3. Frontend Setup
+The API is at `http://localhost:8000`, the web app at `http://localhost:3000`, and the demo app at `http://localhost:8080`. The API liveness route is `/health`; `/api/v1/healthz` probes PostgreSQL and Redis and returns degraded when a required dependency is unavailable. Alembic migrations run from the backend container on startup; verify with `docker compose logs api` and `docker compose exec api alembic current`.
+
+For host-based backend development:
+
+```powershell
+$env:PYTHONPATH = "backend"
+python -m pip install -r backend/requirements.txt
+python -m alembic -c backend/alembic.ini upgrade head
+python -m uvicorn app.main:app --app-dir backend --reload --port 8000
+```
+
+For frontend development:
+
 ```powershell
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 4. Running Tests
+## Tests and build
+
 ```powershell
-# Run backend pytest suite (15/15 tests)
-$env:PYTHONPATH="backend"
+$env:PYTHONPATH = "backend"
 python -m pytest backend/tests/ -v
-
-# Run frontend typecheck and build
 cd frontend
 npx tsc --noEmit
 npm run build
 ```
 
----
+Flagsmith Cloud uses the Management API at `https://api.flagsmith.com/api/v1` with an organization Management API key. Credentials are entered through the Integrations screen and stored encrypted by the API. Live behavior depends on a reachable Flagsmith instance and valid credentials. Local/private self-hosted endpoints are blocked by SSRF protections; use a publicly routable HTTPS host.
 
-## Deployment Documentation
-- For self-hosted on-premises deployment: [`README_SELF_HOSTED.md`](file:///c:/Users/unbel/Downloads/FlagForge_Architecture_Package/README_SELF_HOSTED.md)
-- For cloud infrastructure deployment: [`README_CLOUD.md`](file:///c:/Users/unbel/Downloads/FlagForge_Architecture_Package/README_CLOUD.md)
+## Implemented behavior and boundaries
+
+- Flagsmith connection checks, paginated project/environment/feature discovery, and synchronization are implemented and covered with mocked HTTP tests. Live provider compatibility remains unverified.
+- Webhook HMAC validation is a FlagForge-specific contract. Native Flagsmith webhook signature compatibility has not been verified.
+- Chaos Lab only produces synthetic records; it does not change remote flags or generate load, and does not claim restoration.
+- Risk evaluation requires sufficient telemetry for a favorable decision. Current telemetry ingestion accepts aggregate batches; the configured OpenTelemetry Collector is not an ingestion path into that store.
+- Release Guardian remote rollback returns HTTP 501 until a provider write and read-after-write verification are implemented.
+- Cleanup patch previews are local proposals. GitHub pull request creation returns HTTP 501 because no GitHub App integration is configured.
+- The `worker` service currently starts a placeholder loop and consumes no jobs.
+
+## Security notes
+
+Keep `.env` and provider tokens out of source control and logs. Use unique production secrets, TLS at public boundaries, backups for persistent databases, and an ingress policy appropriate for your deployment. Review [README_SELF_HOSTED.md](README_SELF_HOSTED.md) and [README_CLOUD.md](README_CLOUD.md) as deployment drafts; neither is a substitute for a deployment-specific security review.

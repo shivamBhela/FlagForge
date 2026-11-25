@@ -4,6 +4,7 @@ import json
 import pytest
 from unittest.mock import patch, AsyncMock
 from app.services.flagsmith_client import FlagsmithClient
+from app.services.webhook_receiver import verify_webhook_signature
 
 
 @pytest.fixture
@@ -58,7 +59,7 @@ def test_flagsmith_connection_lifecycle_and_security(client):
 
         conn_payload = {
             "name": "Flagsmith Production Cloud",
-            "api_url": "https://edge.api.flagsmith.com/api/v1",
+            "api_url": "https://api.flagsmith.com/api/v1",
             "token": "secret-flagsmith-mgmt-key-9999",
             "connection_type": "CLOUD",
             "webhook_secret": "my-secret-webhook-signing-key",
@@ -67,7 +68,7 @@ def test_flagsmith_connection_lifecycle_and_security(client):
         assert res_conn.status_code == 201
         conn_data = res_conn.json()
         assert conn_data["name"] == "Flagsmith Production Cloud"
-        assert conn_data["api_url"] == "https://edge.api.flagsmith.com/api/v1"
+        assert conn_data["api_url"] == "https://api.flagsmith.com/api/v1"
         assert conn_data["has_token"] is True
         assert conn_data["has_webhook_secret"] is True
         # Verify secret token is NOT leaked in the response
@@ -159,6 +160,7 @@ def test_idempotent_synchronization_and_flags_query(client, mock_flagsmith_data)
 
 
 def test_webhook_signature_verification_and_processing(client, mock_flagsmith_data):
+    assert verify_webhook_signature(b'{"event":"test"}', None, None) is False
     # Setup user, org, connection with webhook_secret
     client.post("/api/v1/auth/register", json={"email": "webhook.user@flagforge.io", "password": "Password123!", "full_name": "Webhook User"})
     token = client.post("/api/v1/auth/login", json={"email": "webhook.user@flagforge.io", "password": "Password123!"}).json()["access_token"]

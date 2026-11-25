@@ -71,6 +71,9 @@ def test_flagsmith_client_url_normalization():
     c2 = FlagsmithClient(base_url="https://flagsmith.mycompany.internal/api/v1/", token="test-key")
     assert c2.base_url == "https://flagsmith.mycompany.internal/api/v1"
 
+    c_api = FlagsmithClient(base_url="https://flagsmith.mycompany.internal/api", token="test-key")
+    assert c_api.base_url == "https://flagsmith.mycompany.internal/api/v1"
+
     c3 = FlagsmithClient(base_url="https://edge.api.flagsmith.com/api/v1", token="test-key")
     assert c3.base_url == "https://edge.api.flagsmith.com/api/v1"
 

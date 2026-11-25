@@ -66,7 +66,7 @@ export default function CodeScannerPage() {
         // Auto create demo repository
         const newRepo = await api.scanner.createRepository(currentOrg.id, {
           name: "web-storefront",
-          repo_url: "https://github.com/cloudcorp/web-storefront",
+          repo_url: "https://example.invalid/flagforge/demo-web-storefront",
           language: "typescript",
         });
         repoId = newRepo.id;

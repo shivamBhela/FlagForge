@@ -34,7 +34,7 @@ export default function IntegrationsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [connType, setConnType] = useState<"CLOUD" | "SELF_HOSTED">("CLOUD");
   const [name, setName] = useState("Flagsmith Cloud");
-  const [apiUrl, setApiUrl] = useState("https://edge.api.flagsmith.com/api/v1");
+  const [apiUrl, setApiUrl] = useState("https://api.flagsmith.com/api/v1");
   const [token, setToken] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [testing, setTesting] = useState(false);
@@ -173,8 +173,8 @@ export default function IntegrationsPage() {
   };
 
   const copyWebhookUrl = (connId: string) => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:8000";
-    const webhookUrl = `${origin}/api/v1/webhooks/flagsmith/${connId}`;
+    const apiOrigin = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
+    const webhookUrl = `${apiOrigin}/api/v1/webhooks/flagsmith/${connId}`;
     navigator.clipboard.writeText(webhookUrl);
     setCopiedId(connId);
     setTimeout(() => setCopiedId(null), 2000);
@@ -416,7 +416,7 @@ export default function IntegrationsPage() {
                     type="button"
                     onClick={() => {
                       setConnType("CLOUD");
-                      setApiUrl("https://edge.api.flagsmith.com/api/v1");
+                      setApiUrl("https://api.flagsmith.com/api/v1");
                       setName("Flagsmith Cloud");
                     }}
                     className={`p-3 rounded-lg border text-left flex items-center gap-2.5 transition ${
@@ -428,7 +428,7 @@ export default function IntegrationsPage() {
                     <Cloud className="w-4 h-4 text-blue-400" />
                     <div>
                       <div className="text-xs font-bold">Flagsmith Cloud</div>
-                      <div className="text-[10px] text-slate-400">Official edge API</div>
+                      <div className="text-[10px] text-slate-400">Official Management API</div>
                     </div>
                   </button>
 
@@ -436,7 +436,7 @@ export default function IntegrationsPage() {
                     type="button"
                     onClick={() => {
                       setConnType("SELF_HOSTED");
-                      setApiUrl("http://localhost:8000/api/v1");
+                      setApiUrl("https://flagsmith.example.com/api/v1");
                       setName("Self-Hosted Cluster");
                     }}
                     className={`p-3 rounded-lg border text-left flex items-center gap-2.5 transition ${
@@ -470,7 +470,7 @@ export default function IntegrationsPage() {
 
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Flagsmith API Base URL
+                  Flagsmith Management API Base URL
                 </label>
                 <input
                   type="url"
@@ -478,10 +478,10 @@ export default function IntegrationsPage() {
                   value={apiUrl}
                   onChange={(e) => setApiUrl(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-[#151e2e] border border-[#1e293b] text-white text-xs font-mono focus:outline-none focus:border-blue-500"
-                  placeholder="https://edge.api.flagsmith.com/api/v1"
+                  placeholder="https://api.flagsmith.com/api/v1"
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
-                  Protected against SSRF. Internal loopbacks and cloud metadata endpoints are strictly blocked.
+                  API-side SSRF checks block loopback and private network targets. Use a reachable HTTPS host name for self-hosted deployments.
                 </p>
               </div>
 
@@ -504,10 +504,10 @@ export default function IntegrationsPage() {
 
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Webhook Secret (Optional)
+                  Webhook HMAC Secret (Optional; required for signed events)
                 </label>
                 <input
-                  type="text"
+                  type="password"
                   value={webhookSecret}
                   onChange={(e) => setWebhookSecret(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-[#151e2e] border border-[#1e293b] text-white text-xs font-mono focus:outline-none focus:border-blue-500"

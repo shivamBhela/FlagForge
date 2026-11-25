@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.organization import OrganizationMember
-from app.models.cleanup import CleanupPatch, PatchStatus
+from app.models.cleanup import CleanupPatch
 from app.services.cleanup_studio import CleanupStudioEngine
 from app.api.deps import require_org_member, require_org_admin
 
@@ -16,10 +16,6 @@ router = APIRouter()
 class PatchPreviewRequest(BaseModel):
     flag_key: str
     file_path: str
-
-
-class CreatePRRequest(BaseModel):
-    patch_id: uuid.UUID
 
 
 @router.get("/organizations/{org_id}/cleanup/stale-flags")
@@ -72,8 +68,7 @@ async def create_pull_request(
     if not patch:
         raise HTTPException(status_code=404, detail="Patch not found")
 
-    patch.status = PatchStatus.PR_CREATED
-    patch.pr_url = f"https://github.com/cloudcorp/web-storefront/pull/{uuid.uuid4().hex[:6]}"
-    await db.commit()
-    await db.refresh(patch)
-    return patch
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="GitHub App integration is not configured. The cleanup diff remains a reviewable local proposal.",
+    )

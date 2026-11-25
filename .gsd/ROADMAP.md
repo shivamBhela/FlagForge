@@ -75,7 +75,7 @@ updated: "2026-11-24T18:27:00Z"
 
 ### Phase 6: Chaos Lab Sandbox
 **Status:** ✅ Complete
-**Objective:** Controlled staging simulation with pre-change snapshot and guaranteed verified restoration.
+**Objective:** Synthetic staging-only scenario records; remote traffic generation, flag mutation, and restoration verification are not implemented.
 **Requirements:** REQ-06
 **Depends on:** Phase 5
 
