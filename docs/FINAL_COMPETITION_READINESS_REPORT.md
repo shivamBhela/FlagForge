@@ -1,7 +1,7 @@
 # FlagForge Final Competition Readiness Report
 
 **Assessment date:** 2026-11-26
-**Verdict:** The local application and documented QA workflows are substantially implemented and verified. FlagForge is **not production-ready**: clean-checkout installation is pending, external GitHub PR creation is blocked by missing credentials, rollback is disabled, and operational/security controls for shared deployment are incomplete.
+**Verdict:** The local application and documented QA workflows are substantially implemented and verified. FlagForge is **not production-ready**: external GitHub PR creation is blocked by missing credentials, rollback is disabled, and operational/security controls for shared deployment are incomplete.
 
 ## Test area status
 
@@ -13,6 +13,7 @@
 | Authentication | **Passed** | Backend auth/JWT/RBAC/tenant tests; headed browser registration, persistence, logout/login. |
 | Frontend routes | **Passed** | Headed Chromium exercised all 18 route experiences beyond initial loading. |
 | Browser workflows | **Passed** | Org/project/environment creation, synthetic seed, scanner/search, flags/filter, dependencies, monitoring, risk, incidents, cleanup preview, navigation and mobile width. No uncaught page errors or HTTP 5xx. |
+| Clean-checkout installation | **Passed** | Fresh clone of committed `acd08d4`, isolated Compose project and volumes, documented setup, successful migrations/health checks, and headed browser workflow passed. Same host; no second-machine claim. |
 | Flagsmith live connection | **Live-verified** | Official pinned local 2.295.2 Management API. Real project/environment/flag discovery and synchronization were previously verified in QA. |
 | Synchronization | **Live-verified** | Real Staging test-flag state change was detected by sync; Development and Production were not modified. Repeated sync was idempotent. |
 | Webhooks | **Live-verified locally** | Signed provider test event and two real Staging flag changes (enable/restore) processed and synchronized. Test flag restored disabled; temporary webhook removed; signing secret cleared. Provider retry/outage behavior unverified. |
@@ -21,7 +22,6 @@
 | Release Guardian | **Implemented; rollback disabled for safety** | Risk evaluation works. Rollback endpoint returns explicit HTTP 501 with no provider mutation because race-safe conditional-write behavior is not established. |
 | Cleanup Studio / GitHub | **Implemented; live use blocked by missing credentials** | Reviewed real-file diff, explicit approval and mocked API/tenant tests cover separate branch/PR behavior. No GitHub credentials or external repository were contacted. |
 | Security | **Partially verified** | Secret encryption, JWT/RBAC/tenant tests, SSRF checks, signed webhook validation, loopback-only ports and zero npm audit findings. No independent security audit, public TLS, backup restore or HA test. |
-| Clean-checkout installation | **Pending** | Current Windows/Docker deployment passed. A clean isolated checkout run remains to be completed; a second physical host is unavailable. |
 
 ## Commands and artifacts
 
@@ -33,6 +33,7 @@
 - `npm audit` and `npm audit --omit=dev` — zero vulnerabilities.
 - `npm run test:e2e -- --headed --reporter=list` — 1 passed against the rebuilt container.
 - Supplemental `npx eslint src` — failed with 34 source findings; see [end-to-end report](END_TO_END_TEST_REPORT.md). These findings remain visible.
+- Fresh checkout `C:\Users\unbel\Downloads\FlagForge_CleanInstall_QA`: documented `setup.ps1` and headed browser test passed using independent Compose-scoped volumes.
 
 Browser screenshots and Playwright traces are in the ignored `frontend/test-results/` and `frontend/playwright-report/` folders. No credentials or generated secrets are committed.
 
@@ -46,7 +47,6 @@ Browser screenshots and Playwright traces are in the ignored `frontend/test-resu
 ### Medium
 
 - Remote rollback is deliberately disabled. The Management API supports environment-scoped state updates, but no provider-side conditional-write guarantee was established for safe concurrent restoration.
-- Clean-checkout setup remains pending.
 - Provider webhook retry and callback-outage behavior remain unverified.
 - Supplemental ESLint reports 34 existing source findings.
 

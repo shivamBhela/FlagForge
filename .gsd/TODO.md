@@ -14,8 +14,8 @@
 
 ## Pending
 
-- [ ] Run documented setup in a clean isolated checkout with separate volumes; retain the existing default volumes and restart the default deployment afterward.
-- [ ] Update reports with clean-checkout result and commit the final evidence docs.
+- [x] Run documented setup in a clean isolated checkout with separate volumes; retain the existing default volumes.
+- [x] Update reports with clean-checkout result. Commit the final evidence docs after restoring and verifying the default deployment.
 - [ ] Reduce the 34 ESLint findings (15 state-in-effect, 14 dependency arrays, two internal navigation, two unescaped-text and one immutability). Do not weaken lint rules to clear the count.
 - [ ] Verify GitHub integration against an explicitly authorized test repository when credentials are configured.
 - [ ] Do not enable remote rollback until provider concurrency/conditional-write semantics, approval, audit and read-after-write can be safely guaranteed.

@@ -9,6 +9,7 @@
 - **Backend:** `docker compose run --rm --no-deps --build api python -m pytest tests/ -v` — **35 passed**, one Starlette/httpx deprecation warning.
 - **Frontend:** Next.js 16.4.6, React 19.3.1. TypeScript and production build pass. `npm audit` and `npm audit --omit=dev` report zero vulnerabilities.
 - **Browser:** Headed Chromium E2E passed, exercising registration/login/logout, organization/project/environment creation, all 18 routes, synthetic Staging workflow, search/filter, responsive width, persistence and no console/5xx errors.
+- **Clean installation:** Fresh clone of committed revision `acd08d4` passed documented `setup.ps1`, independent Compose-scoped volumes, both migration jobs, health script and headed Playwright workflow (1 passed). Same Windows host; no second-host claim.
 - **Provider webhook:** A signed provider test callback and actual Staging test-flag enable/restore events were delivered and processed. FlagForge recorded event/sync history; the flag was restored disabled and temporary webhook/secret removed.
 
 ## Verified implementation
@@ -23,7 +24,6 @@
 
 ## Remaining limitations and follow-up
 
-- **Pending:** Run documented installation in a clean isolated checkout and record whether it passes. Preserve the default project volumes.
 - Live GitHub API/PR lifecycle is blocked by missing credentials.
 - Remote rollback remains HTTP 501 and makes no provider change because race-safe conditional writes are not established.
 - Chaos Lab is synthetic; it sends no load and performs no remote mutation.

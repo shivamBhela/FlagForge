@@ -9,14 +9,15 @@
 | Check | Status | Evidence |
 | --- | --- | --- |
 | `docker compose config --quiet` | **Passed** | Default configuration and explicit `COMPOSE_PROJECT_NAME=flagforge-clean-qa` both rendered successfully. |
-| `docker compose up --build -d` | **Passed** | Stack recreated with Compose-generated container names and scoped network; named volumes were retained. |
+| `docker compose up --build -d` | **Passed** | Default stack recreated with generated names and scoped network; named volumes were retained. |
 | `scripts/health-check.ps1` | **Passed** | All 10 long-running services healthy; both one-shot migration containers exited 0; HTTP checks passed for API, web, demo app, Flagsmith liveness and Collector health. |
 | Alembic current | **Passed** | `009_encrypt_webhook_secrets (head)`. |
 | Backend pytest in project container | **Passed** | 35 passed, one Starlette/httpx deprecation warning. |
 | `npx tsc --noEmit` | **Passed** | Exit code 0. |
 | `npm run build` | **Passed** | Next.js 16.4.6 production build generated all 20 app routes. |
 | `npm audit` / `npm audit --omit=dev` | **Passed** | Both report zero known vulnerabilities. |
-| Headed Playwright Chromium | **Passed** | 1 end-to-end workflow passed against the rebuilt production container. |
+| Headed Playwright Chromium | **Passed** | 1 end-to-end workflow passed against the rebuilt production container and again against a fresh isolated checkout. |
+| Clean-checkout installation | **Passed** | Committed `acd08d4` cloned separately, documented `setup.ps1` built and started the stack with a distinct Compose name/volumes; all service and HTTP health checks passed. |
 | Supplemental `npx eslint src` | **Failed** | 34 existing source findings: 15 `set-state-in-effect`, 14 `exhaustive-deps`, 2 internal-navigation, 2 unescaped-text and 1 immutability. This was not weakened to obtain a pass. |
 
 ## Browser workflow
@@ -31,6 +32,8 @@
 
 Screenshots, traces and test output are in the ignored `frontend/test-results/` and `frontend/playwright-report/` directories. These files contain synthetic QA data only and are not committed.
 
+The fresh isolated checkout at `C:\Users\unbel\Downloads\FlagForge_CleanInstall_QA` also passed the headed Playwright run (1 passed, 32.6 seconds). The default project's named volumes were preserved; the fresh checkout created a separate set of volumes. Both installs ran on the same Windows/Docker Desktop host.
+
 ## Real and mocked integrations
 
 - **Flagsmith real local API:** official 2.295.2 instance, pinned by digest. Existing evidence covers project/environment/flag discovery and synchronization, including Staging-only state change detection; Development and Production remained unchanged.
@@ -43,7 +46,7 @@ Screenshots, traces and test output are in the ignored `frontend/test-results/` 
 
 ## Remaining limitations
 
-- Isolated clean-checkout setup is still pending and will be recorded in the [installation verification report](INSTALLATION_VERIFICATION_REPORT.md). A second physical machine was not available.
+- A second physical machine was not available; clean install evidence covers a separate checkout with isolated volumes on this host only.
 - Live GitHub authentication/PR lifecycle and race-safe provider rollback are unverified.
 - Provider webhook retries, TLS/public ingress, backup restore, HA/load and independent penetration testing are unverified.
 - The supplemental lint run reports 34 findings. TypeScript and production build pass; lint debt remains explicit.
