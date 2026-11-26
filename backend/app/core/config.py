@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     FLAGSMITH_BASE_URL: str = "https://api.flagsmith.com/api/v1"
     FLAGSMITH_ALLOWED_HOSTS: List[str] = []
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4318"
+    OTEL_INGEST_TOKEN: str = ""
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
@@ -66,6 +67,8 @@ class Settings(BaseSettings):
             raise ValueError("Production requires a valid Fernet ENCRYPTION_KEY.") from exc
         if len(encryption_key) != 32 or self.ENCRYPTION_KEY == "tU_hQ8z2fPj_eL7_X0v9Y4kW3rA6mB1nC5sD8eF2gH4=":
             raise ValueError("Production requires a unique Fernet ENCRYPTION_KEY.")
+        if len(self.OTEL_INGEST_TOKEN) < 32:
+            raise ValueError("Production requires an OTEL_INGEST_TOKEN of at least 32 characters.")
 
         return self
 

@@ -65,6 +65,8 @@ class DeterministicRiskEngine:
         telemetry_sufficient = (
             telem["has_telemetry"]
             and telem["total_requests"] >= policy.min_telemetry_samples
+            and telem.get("has_latency_histogram", False)
+            and telem.get("avg_p95_ms") is not None
         )
         if not telemetry_sufficient:
             # Unknown production behavior is not evidence of health. Keep the

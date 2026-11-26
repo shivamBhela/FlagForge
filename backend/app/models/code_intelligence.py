@@ -37,6 +37,9 @@ class Scan(Base, UUIDMixin, TimestampMixin):
 
     organization_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
     repository_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("repositories.id", ondelete="CASCADE"), nullable=False, index=True)
+    background_job_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("background_jobs.id", ondelete="SET NULL"), nullable=True, unique=True, index=True
+    )
     commit_sha: Mapped[str] = mapped_column(String(40), default="HEAD", nullable=False)
     branch: Mapped[str] = mapped_column(String(100), default="main", nullable=False)
     status: Mapped[ScanStatus] = mapped_column(SQLEnum(ScanStatus), default=ScanStatus.PENDING, nullable=False)

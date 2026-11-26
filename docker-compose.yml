@@ -26,6 +26,7 @@ x-flagforge-env: &flagforge-env
   FLAGSMITH_BASE_URL: ${FLAGSMITH_BASE_URL:-http://flagsmith:8000/api/v1}
   FLAGSMITH_ALLOWED_HOSTS: '${FLAGSMITH_ALLOWED_HOSTS:-["flagsmith"]}'
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_INGEST_TOKEN: ${OTEL_INGEST_TOKEN:-}
 
 services:
   web:
@@ -107,7 +108,7 @@ services:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-c", "import redis; print('worker runtime ready')"]
+      test: ["CMD", "python", "-c", "import os, redis; c=redis.Redis.from_url(os.environ['REDIS_URL']); assert c.ping() and c.exists('flagforge:worker:heartbeat'); print('worker ready')"]
       interval: 20s
       timeout: 5s
       retries: 3
@@ -154,6 +155,8 @@ services:
     image: otel/opentelemetry-collector-contrib:0.100.0
     container_name: flagforge-otel-collector
     restart: unless-stopped
+    environment:
+      OTEL_INGEST_TOKEN: ${OTEL_INGEST_TOKEN:-}
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
     ports:
@@ -181,6 +184,9 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       FLAGSMITH_BASE_URL: http://flagsmith:8000/api/v1
       FLAGSMITH_ENVIRONMENT_KEY: ${FLAGSMITH_ENVIRONMENT_KEY:-}
+      FLAGFORGE_ORGANIZATION_ID: ${FLAGFORGE_TELEMETRY_ORGANIZATION_ID:-}
+      FLAGFORGE_PROJECT_ID: ${FLAGFORGE_TELEMETRY_PROJECT_ID:-}
+      FLAGFORGE_ENVIRONMENT_NAME: ${FLAGFORGE_TELEMETRY_ENVIRONMENT:-staging}
     depends_on:
       api:
         condition: service_healthy

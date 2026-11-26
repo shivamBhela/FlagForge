@@ -5,27 +5,28 @@ import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import {
   Activity,
-  Radio,
   RefreshCw,
   TrendingUp,
-  AlertTriangle,
-  Zap,
 } from "lucide-react";
 
 export default function LiveMonitorPage() {
   const { currentOrg } = useAuth();
   const [metrics, setMetrics] = useState<any | null>(null);
   const [selectedFlag, setSelectedFlag] = useState("checkout_v2_redesign");
+  const [selectedEnvironment, setSelectedEnvironment] = useState("staging");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadMetrics = async () => {
     if (!currentOrg) return;
     setLoading(true);
+    setLoadError(null);
     try {
-      const data = await api.telemetry.getMetrics(currentOrg.id, selectedFlag);
+      const data = await api.telemetry.getMetrics(currentOrg.id, selectedFlag, selectedEnvironment);
       setMetrics(data);
     } catch (e) {
-      // Ignore
+      setMetrics(null);
+      setLoadError(e instanceof Error ? e.message : "Metrics could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -33,7 +34,7 @@ export default function LiveMonitorPage() {
 
   useEffect(() => {
     loadMetrics();
-  }, [currentOrg, selectedFlag]);
+  }, [currentOrg, selectedFlag, selectedEnvironment]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -49,42 +50,53 @@ export default function LiveMonitorPage() {
           </p>
         </div>
 
-        <button
-          onClick={loadMetrics}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-[#151e2e] border border-[#1e293b] text-xs font-medium text-slate-300 hover:text-white hover:bg-[#1f2937] transition"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Refresh Metrics</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <label htmlFor="monitor-environment" className="text-xs text-slate-400">Environment</label>
+          <select id="monitor-environment" value={selectedEnvironment}
+            onChange={(event) => setSelectedEnvironment(event.target.value)}
+            className="px-3 py-2 rounded-lg bg-[#151e2e] border border-[#1e293b] text-xs text-white">
+            <option value="development">Development</option>
+            <option value="staging">Staging</option>
+            <option value="production">Production</option>
+          </select>
+          <button
+            onClick={loadMetrics}
+            disabled={loading || !currentOrg}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-[#151e2e] border border-[#1e293b] text-xs font-medium text-slate-300 hover:text-white hover:bg-[#1f2937] transition disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <span>Refresh Metrics</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
         <div className="p-5 rounded-xl bg-[#0c121e] border border-[#1e293b]">
-          <span className="text-xs font-semibold uppercase text-slate-400">Total Attributed Requests</span>
+          <span className="text-xs font-semibold uppercase text-slate-400">Attributed Requests</span>
           <div className="text-2xl font-bold text-white mt-2">
-            {metrics?.total_requests?.toLocaleString() || "1,250"}
+            {loading ? "Loading…" : metrics?.has_telemetry ? metrics.total_requests.toLocaleString() : "—"}
           </div>
-          <p className="text-[11px] text-emerald-400 mt-1">Ingested via OTel traces</p>
+          <p className="text-[11px] text-slate-500 mt-1">Requests in the selected environment</p>
         </div>
         <div className="p-5 rounded-xl bg-[#0c121e] border border-[#1e293b]">
           <span className="text-xs font-semibold uppercase text-slate-400">Average Error Rate</span>
           <div className="text-2xl font-bold text-emerald-400 mt-2">
-            {metrics ? `${(metrics.avg_error_rate * 100).toFixed(2)}%` : "1.40%"}
+            {loading ? "Loading…" : metrics?.has_telemetry ? `${(metrics.avg_error_rate * 100).toFixed(2)}%` : "—"}
           </div>
           <p className="text-[11px] text-slate-500 mt-1">Safety threshold: 5.0%</p>
         </div>
         <div className="p-5 rounded-xl bg-[#0c121e] border border-[#1e293b]">
           <span className="text-xs font-semibold uppercase text-slate-400">p95 Latency</span>
           <div className="text-2xl font-bold text-blue-400 mt-2">
-            {metrics?.avg_p95_ms || 142}ms
+            {loading ? "Loading…" : metrics?.has_latency_histogram && metrics.avg_p95_ms !== null ? `${metrics.avg_p95_ms}ms` : "—"}
           </div>
           <p className="text-[11px] text-slate-500 mt-1">Target threshold: ≤500ms</p>
         </div>
         <div className="p-5 rounded-xl bg-[#0c121e] border border-[#1e293b]">
           <span className="text-xs font-semibold uppercase text-slate-400">Sample Count</span>
           <div className="text-2xl font-bold text-purple-400 mt-2">
-            {metrics?.samples_count || 10} windows
+            {loading ? "Loading…" : metrics?.has_telemetry ? `${metrics.samples_count} windows` : "0 windows"}
           </div>
           <p className="text-[11px] text-slate-500 mt-1">5-minute rolling aggregation</p>
         </div>
@@ -97,7 +109,11 @@ export default function LiveMonitorPage() {
           <span>Real-time Window Telemetry — {selectedFlag}</span>
         </h2>
 
-        {metrics?.series ? (
+        {loading ? (
+          <div role="status" className="text-center py-10 text-slate-400 text-xs">Loading telemetry…</div>
+        ) : loadError ? (
+          <div role="alert" className="text-center py-10 text-rose-300 text-xs">{loadError}</div>
+        ) : metrics?.has_telemetry && metrics.series?.length ? (
           <div className="divide-y divide-[#1e293b]">
             {metrics.series.map((s: any, idx: number) => (
               <div key={idx} className="py-3 flex items-center justify-between text-xs">
@@ -112,7 +128,8 @@ export default function LiveMonitorPage() {
           </div>
         ) : (
           <div className="text-center py-10 text-slate-500 text-xs">
-            Telemetry ingestion active. Waiting for traffic from demo application.
+            <div className="font-semibold text-slate-300">No telemetry received for {selectedFlag}.</div>
+            <div className="mt-2">This is insufficient data, not evidence of healthy behavior. Generate traffic in a configured environment and refresh.</div>
           </div>
         )}
       </div>

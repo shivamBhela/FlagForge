@@ -51,6 +51,7 @@ from app.models.incident import (
     AuditLog,
 )
 from app.models.cleanup import CleanupPatch, PatchStatus
+from app.models.background_job import BackgroundJob
 
 __all__ = [
     "Base",
@@ -98,4 +99,5 @@ __all__ = [
     "AuditLog",
     "CleanupPatch",
     "PatchStatus",
+    "BackgroundJob",
 ]

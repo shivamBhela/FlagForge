@@ -7,7 +7,11 @@ from app.core.config import Settings
 from cryptography.fernet import Fernet
 
 
-def test_production_config_rejects_known_development_secrets():
+def test_production_config_rejects_known_development_secrets(monkeypatch):
+    # Compose injects the live deployment secrets into the test container; this test
+    # must evaluate constructor defaults independently of deployment configuration.
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    monkeypatch.delenv("ENCRYPTION_KEY", raising=False)
     with pytest.raises(ValueError, match="SECRET_KEY"):
         Settings(_env_file=None, APP_ENV="production")
 

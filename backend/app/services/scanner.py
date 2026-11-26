@@ -140,13 +140,22 @@ class CodeScanner:
         commit_sha: str = "HEAD",
         branch: str = "main",
         custom_files: Optional[Dict[str, str]] = None,
+        background_job_id: Optional[uuid.UUID] = None,
     ) -> Scan:
         """Executes a code scan across supplied or local source files and records references."""
+        if background_job_id is not None:
+            prior = (await self.db.execute(select(Scan).where(
+                Scan.organization_id == self.organization_id,
+                Scan.background_job_id == background_job_id,
+            ))).scalar_one_or_none()
+            if prior is not None:
+                return prior
         scan = Scan(
             organization_id=self.organization_id,
             repository_id=repository_id,
             commit_sha=commit_sha,
             branch=branch,
+            background_job_id=background_job_id,
             status=ScanStatus.RUNNING,
         )
         self.db.add(scan)

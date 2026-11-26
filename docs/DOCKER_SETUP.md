@@ -33,7 +33,7 @@ docker compose ps --all
 | FlagForge web | `http://localhost:3000` | None |
 | FlagForge API | `http://localhost:8000` | `flagforge_postgres_data` |
 | FlagForge Alembic migration | One-shot container | FlagForge Postgres |
-| FlagForge worker | Internal service | Currently a placeholder loop |
+| FlagForge worker | Internal service | Redis Streams consumer for Flagsmith sync and repository scan jobs; durable status and restart recovery |
 | FlagForge PostgreSQL | Host 5433, container 5432 | `flagforge_postgres_data` |
 | FlagForge Redis | Host 6380, container 6379 | `flagforge_redis_data` |
 | OTel Collector | OTLP 4317/4318; metrics 8889; health 13133 | None |
@@ -56,7 +56,7 @@ docker compose logs --tail 200 flagsmith-task-processor
 docker compose logs --tail 200 postgres redis otel-collector
 ```
 
-The health script checks service/container state, configured Docker healthchecks, successful one-shot migrations and HTTP responses from FlagForge API/web/demo, Flagsmith liveness and Collector health. A healthy process does not by itself prove Management API sync or task execution; follow the live integration instructions.
+The health script checks service/container state, configured Docker healthchecks, successful one-shot migrations and HTTP responses from FlagForge API/web/demo, Flagsmith liveness and Collector health. A healthy process does not by itself prove Management API sync or task execution; follow the live integration instructions. Worker jobs currently cover Flagsmith sync and repository scanning; other analysis remains synchronous.
 
 ```powershell
 docker compose exec api alembic -c alembic.ini current

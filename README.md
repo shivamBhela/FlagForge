@@ -33,7 +33,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-Mocks verify adapter contracts; they do not replace the live Flagsmith demonstration. The `worker` is currently a placeholder, OTLP telemetry is not persisted into FlagForge, remote rollback and GitHub PR creation return HTTP 501, and Chaos Lab remains synthetic-only. See [`docs/FINAL_COMPETITION_READINESS_REPORT.md`](docs/FINAL_COMPETITION_READINESS_REPORT.md) for current evidence and limitations.
+The worker runs Redis Streams jobs for Flagsmith sync and repository scans. Demo-app OTLP metrics flow through the Collector into the authenticated FlagForge telemetry store and Risk Engine. The local Flagsmith connection and synchronization are live-verified. Chaos Lab remains a non-mutating simulation. Native Flagsmith webhook delivery is not live-verified; GitHub PR creation and remote rollback remain disabled (HTTP 501). See the [end-to-end test report](docs/END_TO_END_TEST_REPORT.md), [known limitations](docs/KNOWN_LIMITATIONS.md) and [competition readiness report](docs/FINAL_COMPETITION_READINESS_REPORT.md) for evidence and scope.
 
 ## Documentation
 

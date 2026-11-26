@@ -20,6 +20,12 @@ exporters:
   prometheus:
     endpoint: 0.0.0.0:8889
     namespace: flagforge
+  otlphttp/flagforge:
+    endpoint: http://api:8000/api/v1/telemetry/otlp
+    encoding: json
+    compression: none
+    headers:
+      Authorization: "Bearer ${env:OTEL_INGEST_TOKEN}"
 
 extensions:
   health_check:
@@ -35,7 +41,7 @@ service:
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [debug, prometheus]
+      exporters: [debug, prometheus, otlphttp/flagforge]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]

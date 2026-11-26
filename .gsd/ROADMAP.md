@@ -6,8 +6,8 @@ updated: "2026-11-24T18:27:00Z"
 
 # FlagForge Roadmap
 
-> **Current Phase:** 2 - Application Core
-> **Status:** complete
+> **Current Phase:** 11 - End-to-End Verification and Remaining Integrations
+> **Status:** partial; local Flagsmith, Redis worker and OTLP ingestion are verified, but native webhook delivery, GitHub PR creation, remote rollback and fresh-clone installation are incomplete or unverified.
 
 ## Must-Haves (from SPEC)
 
@@ -47,8 +47,8 @@ updated: "2026-11-24T18:27:00Z"
 ---
 
 ### Phase 3: Flagsmith Integration & Synchronizer
-**Status:** ✅ Complete
-**Objective:** Backend adapter for Flagsmith Management API (Cloud/self-hosted), connection tests, project/environment/flag synchronization, read-after-write verification, and secure webhook handler.
+**Status:** 🟡 Partial — local self-hosted Management API sync is live-verified; native webhook delivery is not.
+**Objective:** Backend adapter for Flagsmith Management API (Cloud/self-hosted), connection tests, project/environment/flag synchronization and secure webhook handler. Local sync is live verified; provider webhook delivery remains unverified.
 **Requirements:** REQ-03, NFR-03
 **Depends on:** Phase 2
 
@@ -83,7 +83,7 @@ updated: "2026-11-24T18:27:00Z"
 
 ### Phase 7: Live Monitor & Telemetry Pipeline
 **Status:** ✅ Complete
-**Objective:** OpenTelemetry ingestion and rolling window metrics aggregation.
+**Objective:** Authenticated OTLP/HTTP histogram ingestion, Collector forwarding, persisted project/environment attribution, histogram-aware aggregation and real QA traffic through Monitor/Risk. Live QA path verified; real production telemetry is not claimed.
 **Requirements:** REQ-07
 **Depends on:** Phase 6
 
@@ -98,24 +98,24 @@ updated: "2026-11-24T18:27:00Z"
 ---
 
 ### Phase 9: Release Guardian & Verified Rollback
-**Status:** ✅ Complete
-**Objective:** Pre-conditions check, distributed locking, atomic rollback execution, and read-after-write verification.
+**Status:** 🟡 Partial — advisory risk/release checks work; provider rollback is deliberately disabled (HTTP 501).
+**Objective:** Risk-based release recommendations and safe rollback. Remote rollback remains disabled until a supported environment-scoped provider write, explicit approval, audit, locking and read-after-write verification are implemented.
 **Requirements:** REQ-09
 **Depends on:** Phase 8
 
 ---
 
 ### Phase 10: Cleanup Studio & Hybrid AI Explanation
-**Status:** ✅ Complete
-**Objective:** Stale flag elimination, unified diff patch generator, GitHub PR opening, and structured explanation with NO-AI fallback.
+**Status:** 🟡 Partial — stale-flag evidence and local diff preview work; GitHub PR creation is not implemented.
+**Objective:** Stale-flag evidence, reviewable patch generation and structured explanation. GitHub App authorization, branch/commit/PR lifecycle remain unimplemented and return HTTP 501.
 **Requirements:** REQ-10
 **Depends on:** Phase 9
 
 ---
 
 ### Phase 11: End-to-End Polish & Full Platform Delivery
-**Status:** ✅ Complete
-**Objective:** Unified platform verification, seed data, comprehensive tests, and production documentation.
+**Status:** 🟡 Partial — local deployment, live integrations and browser flows verified; external-provider gaps and clean-clone installation remain.
+**Objective:** Unified platform verification, accurate integration classifications, comprehensive tests, installation docs and production limitations.
 **Requirements:** REQ-11
 **Depends on:** Phase 10
 **Objective:** Tree-sitter / AST static scanner detecting feature-flag usage in JS/TS and Python with confidence scoring and reference tracking.

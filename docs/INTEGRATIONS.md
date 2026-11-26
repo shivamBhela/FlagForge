@@ -8,15 +8,15 @@ The API's `FLAGSMITH_ALLOWED_HOSTS` is an exact-host allowlist for private servi
 
 ## GitHub
 
-Source scanning and local diff previews exist. GitHub App repository authorization, branch creation and pull request creation are not implemented; PR creation returns HTTP 501. A patch preview is not a pull request.
+Source scanning and local diff previews exist. GitHub App repository authorization, branch creation and pull request creation are not implemented; PR creation returns HTTP 501. GitHub App ID/private key are not configured locally. A patch preview is not a pull request, and no repository was changed.
 
 ## OpenTelemetry
 
-The Collector receives OTLP and exposes transformed Prometheus metrics. Demo-app instrumentation and verified Collector-to-FlagForge database ingestion are still outstanding. The Monitor/Risk UI must not describe synthetic aggregates as live telemetry.
+The demo app emits OTLP/HTTP JSON histograms to the Collector, which exports authenticated data to FlagForge's ingestion endpoint. The endpoint validates configured organization/project/environment/service attribution and persists request, error and histogram observations. Runtime Monitor and Risk Engine were verified with QA traffic. Missing telemetry is reported as insufficient data. Do not treat demo traffic as production measurements.
 
 ## Redis and workers
 
-Compose runs a real Redis service with a health probe. The `worker` service is still a placeholder and has no demonstrated queue consumption, retry or recovery behavior. Manual Flagsmith sync currently executes synchronously in the API.
+Compose runs Redis Streams with a consumer group, persisted job status, bounded retry/backoff and recovery of pending jobs after restart. Flagsmith sync and repository scan have worker handlers and were exercised. Other operations remain synchronous.
 
 ## Chaos Lab and Release Guardian
 
@@ -24,4 +24,4 @@ Chaos Lab is synthetic staging-only and performs no remote mutation or verified 
 
 ## Webhooks
 
-FlagForge tests its configured HMAC request contract and replay protections. Native Flagsmith webhook compatibility has not been verified against live delivery.
+Official Flagsmith documentation specifies environment-level `FLAG_UPDATED` events signed as HMAC-SHA256 over the raw request body in `X-Flagsmith-Signature`. FlagForge implements that signature contract, replay protection and connection-scoped synchronization; unit tests cover valid/invalid signatures and duplicates. The local Flagsmith Staging environment was not configured to deliver a live webhook during QA, so provider delivery remains unverified. Configure a Staging webhook only after setting the same random secret in FlagForge; never omit signature validation. See [Flagsmith webhook documentation](https://github.com/Flagsmith/flagsmith-docs/blob/main/docs/advanced-use/system-administration.md).

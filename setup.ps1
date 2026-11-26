@@ -54,6 +54,10 @@ if (-not (Test-Path -LiteralPath ".env")) {
         GITHUB_APP_PRIVATE_KEY = ""
         GITHUB_WEBHOOK_SECRET = ""
         OTEL_EXPORTER_OTLP_ENDPOINT = "http://otel-collector:4318"
+        OTEL_INGEST_TOKEN = New-HexSecret 32
+        FLAGFORGE_TELEMETRY_ORGANIZATION_ID = ""
+        FLAGFORGE_TELEMETRY_PROJECT_ID = ""
+        FLAGFORGE_TELEMETRY_ENVIRONMENT = "staging"
         LLM_PROVIDER = ""
         LLM_API_KEY = ""
         LLM_MODEL = ""
@@ -65,7 +69,12 @@ if (-not (Test-Path -LiteralPath ".env")) {
     [IO.File]::WriteAllLines((Join-Path $PSScriptRoot ".env"), [string[]]$lines, [Text.UTF8Encoding]::new($false))
     Write-Host "Created .env with generated local-only secrets. The file is gitignored."
 } else {
-    Write-Host "Using existing .env without modifying it."
+    Write-Host "Using existing .env and preserving its configured values."
+    $existingEnv = Get-Content -LiteralPath ".env"
+    if (-not ($existingEnv | Where-Object { $_ -match '^OTEL_INGEST_TOKEN=' })) {
+        Add-Content -LiteralPath ".env" -Value "OTEL_INGEST_TOKEN=$(New-HexSecret 32)"
+        Write-Host "Added a generated local-only OTLP ingestion credential to the ignored .env file."
+    }
 }
 
 $ports = @(3000, 8000, 8080, 8081, 13133, 4317, 4318, 8889, 5433, 6380)

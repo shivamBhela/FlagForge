@@ -1,43 +1,38 @@
 # FlagForge Project State
 
-## Current Position
+## Current position
 
-- **Status**: Official self-hosted Flagsmith and live FlagForge synchronization verified locally; broader platform readiness remains partial.
-- **Assessment date**: 2026-11-26.
-- **Docker**: 10 long-running services healthy; both migration jobs exited 0. Host ports 5433/6380 avoid existing listeners.
-- **Database**: FlagForge Postgres is at Alembic revision `004_unify_dependency_node_enum`; Flagsmith uses a separate Postgres database and volume.
-- **Backend**: 27 tests passed, including a regression assertion for the PostgreSQL graph enum.
-- **Frontend**: `npx tsc --noEmit` and `npm run build` passed; production build generated 20 application routes.
-- **Live Flagsmith**: Official `v2.295.2` image pinned by digest. The local connection discovered one project. A Staging-only OFF change was detected. Additional demo flags synchronized successfully.
+- **Status:** Local FlagForge + official self-hosted Flagsmith works for verified flows. Platform readiness remains partial; no production-readiness claim.
+- **Assessment date:** 2026-11-26.
+- **Docker:** 10 long-running containers healthy. FlagForge and Flagsmith migration services each exited 0. No volumes were deleted.
+- **Database:** FlagForge Alembic is `007_scan_job_idempotency (head)`; Flagsmith has its separate PostgreSQL and migration history.
+- **Backend:** 31 tests passed in the API image; one Starlette/httpx deprecation warning. Host test collection lacks the `redis` package; container run has complete project dependencies.
+- **Frontend:** TypeScript check and Next production build passed (20 application routes).
+- **Live local integrations:** Flagsmith sync/state-change detection; Redis job processing/restart recovery; demo-app OTLP through Collector to persisted telemetry and Risk Engine.
 
 ## Verified implementation
 
-- Docker Compose includes the seven FlagForge services, official self-hosted Flagsmith, separate Flagsmith PostgreSQL, task processor, and migration jobs.
-- FlagForge API registered/authenticated a dedicated QA user and created an isolated organization/project/environment set.
-- The Flagsmith Management API token is encrypted by FlagForge and does not appear in its connection response.
-- Local Flagsmith state is authoritative; one state mutation was made only in the dedicated Staging environment. Development and Production remained ON.
-- Setup, stop, health-check, architecture, integration, security, and local Flagsmith instructions are documented.
-- Tests are isolated from `.env`, so developer-local secrets and service URLs do not affect assertions.
-- Fixed Flags page response mapping, validation error rendering, and PostgreSQL dependency graph enum mismatch during QA.
-- Headed Playwright swept 18 frontend routes; registration, organization/project creation, reload persistence, mobile width, synthetic staging simulation, cleanup preview, and search were exercised.
+- Seven FlagForge services plus Flagsmith application, separate database, task processor and migrations are orchestrated by Compose.
+- Worker supports Redis Streams jobs for Flagsmith sync and repository scanning with persisted status, retries/backoff, pending recovery and graceful shutdown.
+- Authenticated OTLP/HTTP JSON histogram ingestion persists QA Staging metrics with organization/project/service attribution. Aggregation merges buckets before computing latency percentiles. Missing telemetry is insufficient rather than healthy.
+- Official Flagsmith v2.295.2 image remains pinned by digest. Live project/flag sync and a Staging-only state change were observed; Development and Production remained unchanged.
+- Headed Chromium exercised all 18 routes and real browser workflows; screenshots are in the QA workspace `outputs/flagforge-browser-qa/`.
+- Backend suite: 31 passed; `npx tsc --noEmit` passed; `npm run build` passed; Compose config and migrations passed.
+- New detailed evidence: `docs/END_TO_END_TEST_REPORT.md`, `docs/FINAL_COMPETITION_READINESS_REPORT.md`, `docs/KNOWN_LIMITATIONS.md`.
 
-## Known limits
+## Remaining limitations
 
-- Worker is a healthy placeholder and consumes no Redis jobs.
-- OpenTelemetry Collector health is verified, but its OTLP data does not reach FlagForge's telemetry aggregate store.
-- Chaos Lab is synthetic and does not mutate Flagsmith or run traffic.
-- Release Guardian remote rollback and GitHub PR creation return HTTP 501.
-- Native Flagsmith webhook delivery/signature compatibility has not been verified.
-- Playwright route coverage and responsive/persisted-session checks passed. Live logout/re-login and live Flags page mapping were not repeated; the page response mapping was verified with a mocked API response in the automated browser check.
-- The live graph defect was fixed through migration 004; Collector-to-FlagForge telemetry remains disconnected.
-- Fresh-clone onboarding has not been repeated on a second machine; TLS, backups, and production hardening are absent.
+- Native Flagsmith webhook contract matches provider docs and has automated validation/replay tests, but no live configured Flagsmith delivery was run.
+- GitHub App PR workflow is not implemented; local diff preview only and endpoint returns HTTP 501. No GitHub App credentials are present.
+- Remote Flagsmith rollback remains disabled with HTTP 501; no provider mutation is faked.
+- Worker currently runs Flagsmith sync and repository scan only. Other analyses remain synchronous.
+- Chaos Lab is synthetic and staging-only; it sends no load or remote flag mutation.
+- Clean install on a second host, TLS/external exposure, backups/restore, key expiry/rotation and independent security review are unverified.
 
 ## Latest QA snapshot
 
-**Objective:** Deploy the official, pinned Flagsmith service beside FlagForge and demonstrate real local synchronization without overstating product capability.
+An older migration container had failed with exit 255; it was rebuilt/recreated and exited 0. Current revision was verified at head. Earlier initial OTLP attempt returned HTTP 400 under Collector gzip defaults; JSON/no-compression configuration now passes real QA traffic. The host pytest command fails at collection without the `redis` package, while the API image test command reports 31 passing tests.
 
-**Changes:** Fixed Docker startup/config issues, added `email-validator`, corrected local Flagsmith host allowlisting, added local deployment/integration/security docs and helper scripts, and made two backend tests deterministic in the presence of `.env`.
+## Next work
 
-**Verification:** `27 passed`; TypeScript check passed; Next production build passed; Compose config passed; health script reported 10 healthy long-running services and 2 successful migration jobs; migration `004_unify_dependency_node_enum` applied; live graph returned 6 nodes and 5 edges after fix; real connection/sync/state-change/replay passed; headed Playwright route sweep passed.
-
-**Next work:** Replace the worker placeholder, wire Collector telemetry into persisted metrics, validate native provider webhooks, and implement GitHub/rollback integrations only with documented safe provider behavior.
+Configure and deliver a signed webhook from the isolated local Flagsmith Staging environment if local dashboard credentials are available. Keep GitHub PR and rollback disabled until credential/provider contracts and safe implementation are available. Do not revoke a still-used local Flagsmith key without replacing and verifying it first. Do not expose the local deployment publicly.
