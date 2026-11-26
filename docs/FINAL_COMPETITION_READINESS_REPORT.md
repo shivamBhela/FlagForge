@@ -17,7 +17,7 @@
 | Redis background jobs | **IMPLEMENTED AND LIVE-VERIFIED** | Worker consumes Redis Streams jobs; status persists in PostgreSQL. A repository scan was submitted while worker was stopped, observed pending, then completed after worker restart; one reference was stored. Retry/backoff, pending recovery, heartbeat health and clean shutdown are implemented. Current worker job types are Flagsmith sync and repository scan; other operations remain synchronous. |
 | OpenTelemetry ingestion | **IMPLEMENTED AND LIVE-VERIFIED** | Demo FastAPI traffic emitted OTLP/HTTP JSON through the Collector to the authenticated FlagForge receiver and persisted histogram/request/error data with isolated organization/project/Staging attribution. QA generated successful and controlled failed requests. Monitor no-data state distinguishes absence from healthy behavior. |
 | Runtime Monitor and Risk Engine | **IMPLEMENTED AND LIVE-VERIFIED** | On isolated QA telemetry, metrics included request counts, successes/errors, error rate and histogram-derived latency; Risk Engine returned `SUFFICIENT` telemetry confidence. Histogram bucket counts are merged before percentile derivation; percentiles are not averaged. Missing/insufficient input is not treated as healthy. |
-| Native Flagsmith webhook | **IMPLEMENTED AND AUTOMATED-TESTED** | Official docs describe environment-level `FLAG_UPDATED` events and raw-body HMAC-SHA256 in `X-Flagsmith-Signature`; implementation verifies that contract and replay handling. Actual webhook configuration/delivery from the local Flagsmith UI was not exercised, so native live delivery remains **IMPLEMENTED BUT NOT LIVE-VERIFIED**. |
+| Native Flagsmith webhook | **IMPLEMENTED AND AUTOMATED-TESTED; LIVE ATTEMPT BLOCKED** | Official docs describe environment-level `FLAG_UPDATED` events and raw-body HMAC-SHA256 in `X-Flagsmith-Signature`; implementation verifies that contract and replay handling. In Chrome, the local Flagsmith 2.295.2 Staging webhook form rejected the local FlagForge callback as an internal/private network target before sending its test request or creating a webhook. No live delivery is claimed. |
 | Chaos Lab | **SYNTHETIC / DEMO ONLY** | Browser ran a Staging scenario in the isolated QA organization. UI confirmed no load was sent and no remote flag changed; Production lock was active. |
 | Release Guardian / remote rollback | **DISABLED FOR SAFETY** | Risk evaluation and recommendations work. Remote rollback returns HTTP 501 and makes no provider change: safe write semantics and read-after-write verification are not established for this deployment. No rollback success is simulated. |
 | GitHub / Cleanup Studio PR | **BLOCKED BY MISSING CREDENTIALS** | Cleanup candidate evidence and local patch preview work. GitHub App credentials are not configured; PR creation returns HTTP 501. No GitHub repository or PR was contacted. Branch/commit/PR flow is not implemented. |
@@ -31,7 +31,7 @@ Screenshots and route captures are in the QA workspace at `outputs/flagforge-bro
 ## Real versus simulated integrations
 
 - **Real:** local official Flagsmith Management API connection, feature discovery/synchronization and Staging-only state change; Redis job consumption and worker restart recovery; demo-app → OTel Collector → authenticated API → persisted telemetry → Monitor/Risk data path.
-- **Automated only:** provider-shaped webhook HMAC validation/replay tests; Flagsmith adapter contract mocks in unit tests. These are not live native webhook delivery.
+- **Automated only:** provider-shaped webhook HMAC validation/replay tests; Flagsmith adapter contract mocks in unit tests. Flagsmith's local UI blocked the live callback because it targets an internal/private address; its test request was not sent and the webhook was not created.
 - **Synthetic/demo only:** Chaos Lab and its demo samples. They do not mutate remote flags, send load, or represent production telemetry.
 - **Unavailable:** GitHub App authentication/PR and actual remote rollback.
 
@@ -51,7 +51,7 @@ The checked-in local `.env` has an OpenTelemetry ingestion token configured; whe
 
 ### Medium
 
-- **Native Flagsmith webhook delivery was skipped.** Contract is grounded in provider documentation and HMAC logic is tested, but the local environment’s webhook endpoint was not configured and triggered from Flagsmith.
+- **Native Flagsmith webhook delivery is unverified.** The local Flagsmith UI rejected the internal callback URL before sending a test request. No provider webhook was created and no actual callback was delivered. The provider's SSRF protection was left intact; no public relay or public exposure was used.
 - **Only two job types are worker-backed** (Flagsmith sync and repository scan). Dependency graph, aggregation, risk evaluation and cleanup are not queued jobs.
 - **Clean-clone onboarding on a second machine was not tested.** Host-only backend pytest also needs project dependencies installed; the Docker test suite passed.
 - **Chaos Lab remains a UI simulation**, not an actual traffic/flag-state chaos experiment.

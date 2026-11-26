@@ -10,7 +10,7 @@ This file distinguishes working local demonstrations from incomplete production 
 
 ## Medium
 
-- **Native Flagsmith webhook — not live-verified.** Provider documentation specifies environment-level `FLAG_UPDATED` delivery signed by HMAC-SHA256 over the raw UTF-8 body in `X-Flagsmith-Signature`. FlagForge validates the contract and has unit coverage, but the local Flagsmith environment was not configured to deliver an event to the receiver during this QA run.
+- **Native Flagsmith webhook — not live-verified.** Provider documentation specifies environment-level `FLAG_UPDATED` delivery signed by HMAC-SHA256 over the raw UTF-8 body in `X-Flagsmith-Signature`. FlagForge validates the contract and has unit coverage. During browser QA, Flagsmith 2.295.2 rejected the local receiver URL as an internal/private network target before its test request was sent; no webhook was created and no delivery is claimed. The provider's SSRF protection remains enabled, and no public relay was used.
 - **Worker scope is limited.** Redis Streams jobs currently execute Flagsmith sync and repository scans, with durable status, retry/backoff and restart recovery. Dependency graph processing, telemetry aggregation, risk evaluation and cleanup analysis remain synchronous.
 - **Chaos Lab is a simulation.** It does not send load, change a Flagsmith flag or prove state restoration.
 - **Reuse beyond this machine is unproven.** Setup and troubleshooting docs exist, but a fresh clone/installation on a second machine was not tested. Host pytest also requires installing backend dependencies; containerized pytest passed.
@@ -24,7 +24,7 @@ This file distinguishes working local demonstrations from incomplete production 
 
 ## Explicitly unverified
 
-- Native webhook live delivery, duplicate provider retry behavior and provider-side failure retry.
+- Native webhook live delivery, duplicate provider retry behavior and provider-side failure retry. The local UI's private-network URL rejection was observed in Chrome, but no callback request was sent.
 - GitHub authentication, branch creation, commit, PR lifecycle and webhooks.
 - Flagsmith provider-side rollback mutation and exact environment-state restoration.
 - Public TLS, backup restoration, multi-node deployment, load testing and external security review.
