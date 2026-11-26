@@ -4,7 +4,7 @@ from app.models.cleanup import CleanupPatch
 from conftest import TestingSessionLocal
 
 
-def test_cleanup_does_not_claim_a_github_pr_without_integration(client):
+def test_cleanup_requires_a_reviewed_real_diff_before_pr_creation(client):
     client.post(
         "/api/v1/auth/register",
         json={"email": "cleanup.review@flagforge.io", "password": "Password123!", "full_name": "Cleanup Reviewer"},
@@ -35,7 +35,8 @@ def test_cleanup_does_not_claim_a_github_pr_without_integration(client):
     response = client.post(
         f"/api/v1/organizations/{org_id}/cleanup/patches/{patch_id}/create-pr",
         headers=headers,
+        json={"approved": True},
     )
 
-    assert response.status_code == 501
-    assert "GitHub App integration is not configured" in response.json()["detail"]
+    assert response.status_code == 409
+    assert "Prepare and review a real GitHub file diff" in response.json()["detail"]

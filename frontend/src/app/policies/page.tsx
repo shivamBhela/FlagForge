@@ -63,7 +63,7 @@ export default function PoliciesPage() {
             <span>Deterministic Risk Weights & Rollout Policies</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Configure risk factor weights, anomaly thresholds, and automated rollback modes.
+            Configure advisory risk weights and thresholds. Automatic rollback is disabled and no mode changes provider state.
           </p>
         </div>
       </div>
@@ -95,7 +95,7 @@ export default function PoliciesPage() {
             <option value="MONITOR">MONITOR (Record risk and notify, no actions)</option>
             <option value="NOTIFY">NOTIFY (Alert on critical risk)</option>
             <option value="APPROVAL_REQUIRED">APPROVAL_REQUIRED (Require human confirmation)</option>
-            <option value="AUTOMATIC">AUTOMATIC (Enforce verified rollback when thresholds breach)</option>
+            <option value="AUTOMATIC">AUTOMATIC (Advisory only; provider mutation disabled)</option>
           </select>
         </div>
 

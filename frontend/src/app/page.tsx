@@ -300,7 +300,7 @@ export default function OverviewPage() {
               </Link>
             </div>
             <p className="text-xs text-slate-400 mb-4">
-              Flagsmith synchronization and telemetry ingestion are available. GitHub PR creation is not configured in this build.
+              Flagsmith sync and telemetry are available. GitHub PRs require an explicitly configured repository and approval.
             </p>
             <div className="space-y-2.5 text-xs">
               <div className="p-2.5 rounded-lg bg-[#151e2e] border border-[#1e293b] flex items-center justify-between">

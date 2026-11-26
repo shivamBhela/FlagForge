@@ -270,7 +270,30 @@ export const api = {
     createPR: (orgId: string, patchId: string) =>
       apiFetch<any>(`/api/v1/organizations/${orgId}/cleanup/patches/${patchId}/create-pr`, {
         method: "POST",
+        body: JSON.stringify({ approved: true }),
       }),
+    getGitHubSource: (orgId: string, patchId: string) =>
+      apiFetch<any>(`/api/v1/organizations/${orgId}/cleanup/patches/${patchId}/github-source`),
+    prepareGitHubPatch: (orgId: string, patchId: string, payload: any) =>
+      apiFetch<any>(`/api/v1/organizations/${orgId}/cleanup/patches/${patchId}/github-preview`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    refreshPR: (orgId: string, patchId: string) =>
+      apiFetch<any>(`/api/v1/organizations/${orgId}/cleanup/patches/${patchId}/refresh-pr`, { method: "POST" }),
+  },
+  github: {
+    getConnection: (orgId: string) => apiFetch<any>(`/api/v1/organizations/${orgId}/github/connection`),
+    connect: (orgId: string, payload: any) => apiFetch<any>(`/api/v1/organizations/${orgId}/github/connection`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+    listRepositories: (orgId: string) => apiFetch<any[]>(`/api/v1/organizations/${orgId}/github/repositories`),
+    selectRepository: (orgId: string, full_name: string) => apiFetch<any>(`/api/v1/organizations/${orgId}/github/repository`, {
+      method: "PUT",
+      body: JSON.stringify({ full_name }),
+    }),
+    disconnect: (orgId: string) => apiFetch<void>(`/api/v1/organizations/${orgId}/github/connection`, { method: "DELETE" }),
   },
   seed: {
     seedDemo: (orgId: string) =>

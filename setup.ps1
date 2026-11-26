@@ -77,7 +77,27 @@ if (-not (Test-Path -LiteralPath ".env")) {
     }
 }
 
-$ports = @(3000, 8000, 8080, 8081, 13133, 4317, 4318, 8889, 5433, 6380)
+$configuredEnv = @{}
+foreach ($line in (Get-Content -LiteralPath ".env")) {
+    if ($line -match '^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$') {
+        $configuredEnv[$matches[1]] = $matches[2].Trim('"')
+    }
+}
+function Get-ConfiguredPort([string]$Name, [int]$Default) {
+    $value = $configuredEnv[$Name]
+    if ($value -match '^\d+$') { return [int]$value }
+    return $Default
+}
+
+$ports = @(
+    (Get-ConfiguredPort "WEB_PORT" 3000),
+    (Get-ConfiguredPort "API_PORT" 8000),
+    (Get-ConfiguredPort "DEMO_APP_PORT" 8080),
+    (Get-ConfiguredPort "FLAGSMITH_PORT" 8081),
+    (Get-ConfiguredPort "POSTGRES_PORT" 5433),
+    (Get-ConfiguredPort "REDIS_PORT" 6380),
+    13133, 4317, 4318, 8889
+)
 $listeners = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
     Where-Object { $ports -contains $_.LocalPort } |
     Select-Object -ExpandProperty LocalPort -Unique

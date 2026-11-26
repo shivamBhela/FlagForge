@@ -64,7 +64,7 @@ class FlagsmithConnection(Base, TimestampMixin):
         default=FlagsmithConnectionStatus.DISCONNECTED,
         nullable=False,
     )
-    webhook_secret: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    webhook_secret: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     last_synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 

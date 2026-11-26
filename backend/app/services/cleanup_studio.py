@@ -28,7 +28,7 @@ class CleanupStudioEngine:
                     "flag_key": r.flag_key,
                     "references_count": 0,
                     "files": set(),
-                    "reason": "Flag 100% rolled out for >30 days without changes.",
+                    "reason": "Static references detected. Verify rollout, ownership, and age before cleanup.",
                 }
             stale_map[r.flag_key]["references_count"] += 1
             stale_map[r.flag_key]["files"].add(r.file_path)
@@ -38,31 +38,20 @@ class CleanupStudioEngine:
                 "flag_key": k,
                 "references_count": v["references_count"],
                 "files_count": len(v["files"]),
-                "files": list(v["files"]),
+                "files": sorted(v["files"]),
                 "reason": v["reason"],
             }
             for k, v in stale_map.items()
         ]
 
     async def generate_patch_preview(self, flag_key: str, file_path: str) -> CleanupPatch:
-        """Generates a unified diff patch preview eliminating the feature flag conditional check."""
-        diff_snippet = (
-            f"--- a/{file_path}\n"
-            f"+++ b/{file_path}\n"
-            f"@@ -10,6 +10,4 @@\n"
-            f"- if (flagsmith.hasFeature('{flag_key}')) {{\n"
-            f"-   return <ModernComponent />;\n"
-            f"- }}\n"
-            f"- return <LegacyComponent />;\n"
-            f"+ return <ModernComponent />;\n"
-        )
-
+        """Creates a draft proposal; a real remote diff must be prepared and reviewed before PR creation."""
         patch = CleanupPatch(
             organization_id=self.organization_id,
             flag_key=flag_key,
             file_path=file_path,
-            rationale=f"Permanently enable modern code path and eliminate stale flag check for '{flag_key}'.",
-            diff_preview=diff_snippet,
+            rationale=f"Candidate cleanup for '{flag_key}'. Verify the current flag rollout and review actual source changes before authorizing a PR.",
+            diff_preview="No source patch is generated from a synthetic template. Connect an authorized GitHub repository and prepare a diff from the current file.",
             status=PatchStatus.DRAFT,
         )
         self.db.add(patch)

@@ -2,22 +2,21 @@
 
 ## Verified on 2026-11-26
 
-- [x] Compose configuration; 10 long-running services healthy; both migration jobs exited 0.
-- [x] FlagForge Alembic revision `007_scan_job_idempotency (head)`.
-- [x] Backend suite in project API image: 31 passed; one deprecation warning.
-- [x] TypeScript check and Next production build.
-- [x] Flagsmith v2.295.2 pinned local deployment; real project/flag synchronization and Staging-only state-change detection.
-- [x] Redis Streams worker execution, persistent status and restart recovery of a queued scan.
-- [x] Demo-app OTLP → Collector → authenticated FlagForge receiver → persisted telemetry → Risk Engine QA run.
-- [x] Headed Chromium interaction sweep of all 18 routes; auth, org/project/env, scanner, search, graph, monitor, synthetic Chaos, cleanup preview and settings.
-- [x] Added current end-to-end, limitation and competition readiness reports.
+- [x] Compose configuration and health check: 10 long-running services healthy; both migration jobs exit 0.
+- [x] FlagForge migration head `009_encrypt_webhook_secrets`.
+- [x] API-container backend suite: 35 passed, one upstream Starlette/httpx deprecation warning.
+- [x] TypeScript check, Next.js 16 production build, and npm audit with zero vulnerabilities.
+- [x] Headed Chromium workflow across all 18 routes; auth, persistence, org/project/environment, synthetic Chaos, filters, mobile viewport and error checks.
+- [x] Local Flagsmith Staging signed webhook test and real flag-change/restore delivery; state read-back confirmed; temporary webhook and secret cleaned up.
+- [x] GitHub PR workflow implementation and mocked API/tenant tests; live GitHub remains blocked by missing credentials.
+- [x] Local Redis worker/restart recovery, Flagsmith sync, OTLP persistence, Monitor and Risk Engine evidence from prior QA runs.
+- [x] Setup script checks `.env`-configured ports; Compose supports isolated project names and generated service names.
 
-## Open and explicitly unverified
+## Pending
 
-- [ ] Configure local Flagsmith Staging webhook and verify an actual signed provider delivery if a local dashboard session is available.
-- [ ] Implement GitHub App authorization/repository/branch/commit/PR workflow when credentials and an authorized test repository are configured.
-- [ ] Implement provider rollback only after supported endpoint, snapshots, explicit approval, environment scoping, audit, lock and read-after-write are verified.
-- [ ] Expand worker job types only where an existing operation benefits; current handlers are Flagsmith sync and repository scanning.
-- [ ] Repeat documented setup in a clean checkout/on a second machine.
-- [ ] Configure TLS, backup/restore and deployment security before any non-local exposure.
-- [ ] Decide on rotation of the local Flagsmith Management API key after first ensuring a replacement is safely installed; do not revoke a key still needed by the local demo.
+- [ ] Run documented setup in a clean isolated checkout with separate volumes; retain the existing default volumes and restart the default deployment afterward.
+- [ ] Update reports with clean-checkout result and commit the final evidence docs.
+- [ ] Reduce the 34 ESLint findings (15 state-in-effect, 14 dependency arrays, two internal navigation, two unescaped-text and one immutability). Do not weaken lint rules to clear the count.
+- [ ] Verify GitHub integration against an explicitly authorized test repository when credentials are configured.
+- [ ] Do not enable remote rollback until provider concurrency/conditional-write semantics, approval, audit and read-after-write can be safely guaranteed.
+- [ ] Verify provider retry behavior, TLS/ingress, backup restoration and production deployment controls before any external exposure.

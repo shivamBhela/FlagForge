@@ -22,6 +22,7 @@ import {
   Check,
 } from "lucide-react";
 import Link from "next/link";
+import GitHubIntegrationCard from "@/components/GitHubIntegrationCard";
 
 export default function IntegrationsPage() {
   const { currentOrg, isLoading: authLoading } = useAuth();
@@ -214,6 +215,7 @@ export default function IntegrationsPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      <GitHubIntegrationCard />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#1e293b]">
         <div>

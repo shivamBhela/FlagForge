@@ -6,7 +6,7 @@ import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
   title: "FlagForge — Feature Release Intelligence & Safety Platform",
-  description: "Code intelligence, dependency analysis, runtime observability, and verified rollback for Flagsmith.",
+  description: "Code intelligence, dependency analysis, runtime observability, and advisory release risk for Flagsmith.",
 };
 
 export default function RootLayout({

@@ -1,58 +1,49 @@
 # End-to-End Test Report
 
 **Run date:** 2026-11-26
-**Target:** Local Windows Docker Desktop deployment at `http://localhost:3000`
-**Data scope:** Dedicated FlagForge QA user/org/project and Staging telemetry; existing named Docker volumes retained.
+**Target:** Local Windows Docker Desktop deployment; FlagForge at `http://localhost:3000`, Flagsmith at `http://localhost:8081`
+**Data scope:** Dedicated local FlagForge QA accounts/projects and the existing local Flagsmith QA Staging project. Existing named volumes were preserved.
 
 ## Commands and results
 
-| Command or workflow | Result | Evidence |
+| Check | Status | Evidence |
 | --- | --- | --- |
-| `docker compose config --quiet` | Passed | Exit code 0. |
-| `docker compose up --no-deps --build --force-recreate migrate` | Passed | FlagForge migration container exited 0. |
-| `docker compose exec -T api alembic -c alembic.ini current` | Passed | `007_scan_job_idempotency (head)`. |
-| Flagsmith migration container | Passed | `flagsmith-migrate-db` exited 0; database is separate. |
-| `scripts/health-check.ps1` | Passed in completed deployment run | Checks all 10 long-running containers, both migration exit codes, and API/web/demo/Flagsmith/Collector HTTP health. Final `docker compose ps --all` showed all 10 long-running services healthy and migration jobs exited 0. |
-| `docker compose run --rm --no-deps --build api python -m pytest tests/ -q` | Passed | **31 passed**, 1 Starlette deprecation warning. |
-| `$env:PYTHONPATH='backend'; python -m pytest backend/tests/ -q` on host | Failed at test collection (environment dependency) | Host Python has no `redis` package. The same suite ran in the project API image and passed. This is a host setup failure, not a passing test run. |
-| `npx tsc --noEmit` | Passed | Exit code 0. |
-| `npm run build` | Passed | Exit code 0; Next.js generated the 20 application routes. |
-| Worker restart recovery | Passed | Queued a repository scan with worker stopped (PENDING), restarted worker, observed COMPLETED, attempts=1 and one stored code reference. |
-| OTLP end-to-end | Passed | Demo app emitted request histograms via Collector to authenticated FlagForge ingestion; successful and controlled HTTP 500 requests persisted. The QA smoke run reported 76 requests, 75 successes, one error, and persisted histogram latency. |
-| Risk with live QA telemetry | Passed | Risk response reported telemetry confidence `SUFFICIENT` and computed an advisory band/score from persisted observations. |
-| Official local Flagsmith sync | Passed | Discovered local project; synchronized real test flags; a Staging-only test-state change was detected; replay sync was idempotent. No production instance used. |
-| Headed Chromium browser QA | Passed with integration limits below | All 18 routes exercised beyond loading; functional workflows and console exception review performed. Screenshots stored in the QA workspace. |
+| `docker compose config --quiet` | **Passed** | Default configuration and explicit `COMPOSE_PROJECT_NAME=flagforge-clean-qa` both rendered successfully. |
+| `docker compose up --build -d` | **Passed** | Stack recreated with Compose-generated container names and scoped network; named volumes were retained. |
+| `scripts/health-check.ps1` | **Passed** | All 10 long-running services healthy; both one-shot migration containers exited 0; HTTP checks passed for API, web, demo app, Flagsmith liveness and Collector health. |
+| Alembic current | **Passed** | `009_encrypt_webhook_secrets (head)`. |
+| Backend pytest in project container | **Passed** | 35 passed, one Starlette/httpx deprecation warning. |
+| `npx tsc --noEmit` | **Passed** | Exit code 0. |
+| `npm run build` | **Passed** | Next.js 16.4.6 production build generated all 20 app routes. |
+| `npm audit` / `npm audit --omit=dev` | **Passed** | Both report zero known vulnerabilities. |
+| Headed Playwright Chromium | **Passed** | 1 end-to-end workflow passed against the rebuilt production container. |
+| Supplemental `npx eslint src` | **Failed** | 34 existing source findings: 15 `set-state-in-effect`, 14 `exhaustive-deps`, 2 internal-navigation, 2 unescaped-text and 1 immutability. This was not weakened to obtain a pass. |
 
-## Browser interactions
+## Browser workflow
 
-- Registered an isolated FlagForge test account; logged in, logged out and back in; verified session restoration after reload.
-- Created a dedicated organization, project, default environments and a custom non-production environment.
-- Visited and interacted with Projects, Flags, Scanner, Dependencies, Chaos, Monitor, Guardian, Incidents, Cleanup, Integrations, Policies and Settings; visited auth and creation routes as well.
-- Ran the built-in sample scanner and observed stored references; searched for a known flag reference and an unmatched search term.
-- Loaded dependency graph (six nodes, five edges) after the PostgreSQL enum repair.
-- Ran a labeled synthetic Staging-only Chaos Lab scenario; UI explicitly said no traffic or remote flag mutation occurred and Production remained locked.
-- Inspected cleanup candidates and opened a local patch preview; GitHub PR unavailable.
-- Inspected empty integration state in the browser-only org; live Flagsmith connection/sync evidence came from the separate dedicated integration test project, not this new org.
-- Verified empty telemetry is shown as insufficient/no data, then emitted actual demo-app traffic to a QA Staging telemetry project.
-- Checked the 390px mobile viewport; the inspected page had no horizontal overflow. Browser console page errors were empty.
+- Registered a disposable account, created an organization, project and custom environment; verified organization persistence after reload.
+- Seeded synthetic demo fixtures in the disposable QA organization and confirmed the response identified them as local synthetic data.
+- Opened all 18 existing routes, including the created project detail, and waited beyond loading states. Interacted with scanner/search, flag search/filter, synthetic Chaos Lab, dependency graph, monitoring, risk, incidents, cleanup preview, GitHub no-credentials state, settings and navigation.
+- Confirmed Chaos Lab stated that it performed no remote flag mutation. The Production lock remained active.
+- Checked a 390px mobile viewport for horizontal overflow.
+- Logged out and back in; verified organization persistence. Uncaught browser page errors and HTTP 5xx responses: none.
+- The first upgraded-app E2E attempt exposed two harness ordering issues (public auth-route sweep and home-page hydration). The test was corrected and the entire headed suite rerun successfully.
 
-## External integration classification
+Screenshots, traces and test output are in the ignored `frontend/test-results/` and `frontend/playwright-report/` directories. These files contain synthetic QA data only and are not committed.
 
-- **Live local:** Flagsmith API sync; Redis Streams worker and recovery; OTLP demo-app → Collector → FlagForge persistence → risk evaluation.
-- **Mocked/contract-tested:** webhook signature and replay validation in backend tests; provider adapter mocks.
-- **Not live-tested:** Flagsmith’s native configured webhook delivery; GitHub API/PR; remote rollback.
-- **Demo-only:** Chaos simulation and seeded example content.
+## Real and mocked integrations
 
-## Browser artifacts
+- **Flagsmith real local API:** official 2.295.2 instance, pinned by digest. Existing evidence covers project/environment/flag discovery and synchronization, including Staging-only state change detection; Development and Production remained unchanged.
+- **Flagsmith live webhook:** provider-signed test callback plus two actual Staging flag updates (enable and restore) were delivered to the private Compose alias, processed, and reconciled. Database evidence shows processed webhook events and completed webhook-triggered sync history. The test flag read back disabled; the temporary provider webhook was removed and the local webhook signing secret cleared. Provider retry behavior and outage recovery were not tested.
+- **GitHub:** implementation is covered by mocked client, route and tenant tests. No GitHub credentials or authorized external QA repository were available; no external GitHub repository was contacted.
+- **Redis worker:** durable Flagsmith sync/repository scan processing and restart recovery were verified previously; no additional worker job types were introduced.
+- **OpenTelemetry:** prior end-to-end QA sent demo-app OTLP traffic through the Collector into authenticated, tenant-attributed storage and verified Monitor/Risk outputs. Demo telemetry is not customer traffic.
+- **Chaos Lab:** synthetic demonstration only; no load and no provider mutation.
+- **Rollback:** disabled with HTTP 501; no provider mutation is represented as successful.
 
-QA workspace: `outputs/flagforge-browser-qa/`. Captures include `home.png`, `register.png`, `login.png`, route views, `flags-mobile-390.png`, `dependencies-after-fix.png`, `chaos.png`, `cleanup-preview.png`, and settings. These are QA artifacts outside the application repository and contain only local test data.
+## Remaining limitations
 
-## Failures and their disposition
-
-- **Host backend pytest collection:** failed due to missing host `redis` dependency. Retested in the project API container with dependencies installed; 31 tests passed.
-- **Stale prior migration container:** had exit code 255 from an older image, which made the health script’s one-shot migration condition fail. Rebuilt/recreated the migration service; it exited 0, then current revision verified at head. No volume or database reset was used.
-- **Initial OTLP test attempt:** Collector default compression yielded API HTTP 400. Collector exporter was configured with JSON encoding and no compression; subsequent real demo traffic was accepted and persisted.
-
-## Limitations
-
-Native Flagsmith webhook endpoint setup/delivery, GitHub PR creation, remote rollback, second-machine clean installation, public TLS and backup/restore are not verified. See [known limitations](KNOWN_LIMITATIONS.md) and the [final competition report](FINAL_COMPETITION_READINESS_REPORT.md).
+- Isolated clean-checkout setup is still pending and will be recorded in the [installation verification report](INSTALLATION_VERIFICATION_REPORT.md). A second physical machine was not available.
+- Live GitHub authentication/PR lifecycle and race-safe provider rollback are unverified.
+- Provider webhook retries, TLS/public ingress, backup restore, HA/load and independent penetration testing are unverified.
+- The supplemental lint run reports 34 findings. TypeScript and production build pass; lint debt remains explicit.

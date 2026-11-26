@@ -5,6 +5,7 @@ import logging
 from typing import Optional, Tuple
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.crypto import decrypt_webhook_secret
 from app.models.flagsmith import FlagsmithConnection, WebhookEvent, WebhookStatus, SyncTrigger
 from app.services.flagsmith_sync import FlagsmithSyncEngine
 
@@ -51,7 +52,7 @@ class WebhookHandler:
         is_valid = verify_webhook_signature(
             payload_bytes=payload_bytes,
             signature_header=signature_header,
-            secret=connection.webhook_secret,
+            secret=decrypt_webhook_secret(connection.webhook_secret),
         )
 
         if not is_valid:

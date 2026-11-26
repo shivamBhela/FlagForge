@@ -1,5 +1,5 @@
 import base64
-from typing import List
+from typing import List, Optional
 from pydantic import AnyHttpUrl, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     FLAGSMITH_ALLOWED_HOSTS: List[str] = []
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4318"
     OTEL_INGEST_TOKEN: str = ""
+    GITHUB_APP_ID: Optional[str] = None
+    GITHUB_APP_PRIVATE_KEY: Optional[str] = None
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod

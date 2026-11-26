@@ -54,3 +54,7 @@ data/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Playwright QA output
+frontend/test-results/
+frontend/playwright-report/

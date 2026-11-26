@@ -1,4 +1,4 @@
-name: flagforge
+name: ${COMPOSE_PROJECT_NAME:-flagforge}
 
 # The Flagsmith services below follow the official v2.295.2 deployment file:
 # https://github.com/Flagsmith/flagsmith/blob/v2.295.2/docker-compose.yml
@@ -16,6 +16,10 @@ x-flagsmith-env: &flagsmith-env
   PROMETHEUS_ENABLED: "true"
   EXPERIMENTATION_ENABLED: "true"
   ENABLE_TASK_PROCESSOR_HEALTH_CHECK: "true"
+  # Flagsmith 2.295.2 resolves callback hostnames and rejects private IPs by default.
+  # Trust only this Compose service DNS name for this local FlagForge webhook receiver.
+  # The SSRF guard remains enabled for all other destinations.
+  SSRF_ALLOWED_HOSTS: api.flagforge.local
 
 x-flagforge-env: &flagforge-env
   APP_ENV: ${APP_ENV:-development}
@@ -27,16 +31,17 @@ x-flagforge-env: &flagforge-env
   FLAGSMITH_ALLOWED_HOSTS: '${FLAGSMITH_ALLOWED_HOSTS:-["flagsmith"]}'
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
   OTEL_INGEST_TOKEN: ${OTEL_INGEST_TOKEN:-}
+  GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+  GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
 
 services:
   web:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: flagforge-web
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
     environment:
       NEXT_PUBLIC_API_URL: ${API_BASE_URL:-http://localhost:8000}
     depends_on:
@@ -55,7 +60,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: flagforge-migrate
     command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
     environment: *flagforge-env
     depends_on:
@@ -69,10 +73,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: flagforge-api
     restart: unless-stopped
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "127.0.0.1:${API_PORT:-8000}:8000"
     environment: *flagforge-env
     depends_on:
       postgres:
@@ -90,13 +93,14 @@ services:
       retries: 5
       start_period: 20s
     networks:
-      - flagforge-net
+      flagforge-net:
+        aliases:
+          - api.flagforge.local
 
   worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: flagforge-worker
     command: ["python", "-m", "app.worker"]
     restart: unless-stopped
     environment: *flagforge-env
@@ -117,14 +121,13 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: flagforge-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-flagforge}
       POSTGRES_USER: ${POSTGRES_USER:-flagforge}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run setup.ps1 to create local secrets}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - flagforge_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -137,10 +140,9 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: flagforge-redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6380}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6380}:6379"
     volumes:
       - flagforge_redis_data:/data
     healthcheck:
@@ -153,17 +155,16 @@ services:
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.100.0
-    container_name: flagforge-otel-collector
     restart: unless-stopped
     environment:
       OTEL_INGEST_TOKEN: ${OTEL_INGEST_TOKEN:-}
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
     ports:
-      - "4317:4317"
-      - "4318:4318"
-      - "8889:8889"
-      - "13133:13133"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:8889:8889"
+      - "127.0.0.1:13133:13133"
     healthcheck:
       test: ["CMD", "/otelcol-contrib", "validate", "--config=/etc/otelcol-contrib/config.yaml"]
       interval: 20s
@@ -176,10 +177,9 @@ services:
     build:
       context: ./demo-app
       dockerfile: Dockerfile
-    container_name: flagforge-demo-app
     restart: unless-stopped
     ports:
-      - "${DEMO_APP_PORT:-8080}:8080"
+      - "127.0.0.1:${DEMO_APP_PORT:-8080}:8080"
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       FLAGSMITH_BASE_URL: http://flagsmith:8000/api/v1
@@ -205,7 +205,6 @@ services:
 
   flagsmith-postgres:
     image: postgres:15.5-alpine
-    container_name: flagsmith-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: flagsmith
@@ -224,7 +223,6 @@ services:
 
   flagsmith-migrate-db:
     image: ${FLAGSMITH_IMAGE:-docker.flagsmith.com/flagsmith/flagsmith:2.295.2@sha256:48905c664152d8ae2c843ec9cee72ff197e7caff6e91b959bb851a235915ea35}
-    container_name: flagsmith-migrate-db
     command: ["migrate"]
     environment: *flagsmith-env
     depends_on:
@@ -236,12 +234,11 @@ services:
 
   flagsmith:
     image: ${FLAGSMITH_IMAGE:-docker.flagsmith.com/flagsmith/flagsmith:2.295.2@sha256:48905c664152d8ae2c843ec9cee72ff197e7caff6e91b959bb851a235915ea35}
-    container_name: flagsmith-api
     command: ["serve"]
     restart: unless-stopped
     environment: *flagsmith-env
     ports:
-      - "${FLAGSMITH_PORT:-8081}:8000"
+      - "127.0.0.1:${FLAGSMITH_PORT:-8081}:8000"
     depends_on:
       flagsmith-migrate-db:
         condition: service_completed_successfully
@@ -256,7 +253,6 @@ services:
 
   flagsmith-task-processor:
     image: ${FLAGSMITH_IMAGE:-docker.flagsmith.com/flagsmith/flagsmith:2.295.2@sha256:48905c664152d8ae2c843ec9cee72ff197e7caff6e91b959bb851a235915ea35}
-    container_name: flagsmith-task-processor
     command: ["run-task-processor"]
     restart: unless-stopped
     environment: *flagsmith-env
@@ -281,5 +277,4 @@ volumes:
 
 networks:
   flagforge-net:
-    name: flagforge-net
     driver: bridge

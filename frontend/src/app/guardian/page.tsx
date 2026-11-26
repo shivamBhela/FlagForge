@@ -45,13 +45,13 @@ export default function ReleaseGuardianPage() {
             <span>Release Guardian & Deterministic Safety Engine</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Deterministic risk evaluation and policy review. Remote rollback is disabled until provider write and verification are implemented.
+            Deterministic risk evaluation and policy review. Remote rollback is disabled; risk remains advisory in every policy mode.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <span className="text-[11px] px-2.5 py-1 rounded-full font-mono bg-[#151e2e] text-slate-300 border border-[#1e293b]">
-            Mode: {policy?.mode || "AUTOMATIC"}
+            Policy: {policy?.mode || "MONITOR"} (advisory only)
           </span>
           <span className="text-[11px] px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
             Rollback unavailable
@@ -124,7 +124,7 @@ export default function ReleaseGuardianPage() {
           <span>Safety boundary</span>
         </h2>
         <p className="text-xs text-slate-400">
-          The API exposes risk and policy records. Redis-backed locks and verified Flagsmith rollback are not implemented in this checkout, so the UI does not offer a rollback action.
+          The API stores risk and policy records. Provider mutation, state snapshots, and verified rollback are not available; no policy mode changes a remote flag.
         </p>
       </div>
     </div>

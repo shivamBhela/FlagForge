@@ -27,13 +27,25 @@ Check services with `./scripts/health-check.ps1`. Stop only this project while p
 
 ```powershell
 $env:PYTHONPATH = "backend"
+python -m pip install -r backend/requirements.txt
 python -m pytest backend/tests/ -v
+
 cd frontend
+npm ci
 npx tsc --noEmit
 npm run build
+
+# Headed Chromium end-to-end workflow (Docker stack must be running)
+npm run test:e2e -- --headed
 ```
 
-The worker runs Redis Streams jobs for Flagsmith sync and repository scans. Demo-app OTLP metrics flow through the Collector into the authenticated FlagForge telemetry store and Risk Engine. The local Flagsmith connection and synchronization are live-verified. Chaos Lab remains a non-mutating simulation. Native Flagsmith webhook delivery is not live-verified; GitHub PR creation and remote rollback remain disabled (HTTP 501). See the [end-to-end test report](docs/END_TO_END_TEST_REPORT.md), [known limitations](docs/KNOWN_LIMITATIONS.md) and [competition readiness report](docs/FINAL_COMPETITION_READINESS_REPORT.md) for evidence and scope.
+For the containerized backend suite (recommended when Docker is running):
+
+```powershell
+docker compose run --rm --no-deps --build api python -m pytest tests/ -v
+```
+
+The worker runs Redis Streams jobs for Flagsmith sync and repository scans. Demo-app OTLP metrics flow through the Collector into the authenticated FlagForge telemetry store and Risk Engine. Chaos Lab remains a non-mutating simulation. A signed local Flagsmith webhook and Staging-only flag update/restore were live-verified. GitHub PR workflow is implemented and mock-tested, but live GitHub verification requires credentials. Remote rollback remains disabled because race-safe conditional writes have not been established. See the [end-to-end test report](docs/END_TO_END_TEST_REPORT.md), [known limitations](docs/KNOWN_LIMITATIONS.md), [installation verification](docs/INSTALLATION_VERIFICATION_REPORT.md), [security review](docs/SECURITY_REVIEW.md) and [competition readiness report](docs/FINAL_COMPETITION_READINESS_REPORT.md) for evidence and scope.
 
 ## Documentation
 

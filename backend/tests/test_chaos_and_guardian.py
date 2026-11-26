@@ -121,7 +121,10 @@ def test_chaos_lab_telemetry_guardian_and_cleanup(client):
     )
     assert res_patch.status_code == 200
     patch = res_patch.json()
-    assert "--- a/src/components/Checkout.tsx" in patch["diff_preview"]
+    assert patch["diff_preview"] == (
+        "Connect GitHub, select the authorized repository, load this exact file, "
+        "and prepare a reviewable diff."
+    )
     assert patch["status"] == "DRAFT"
 
     # 9. Chaos Lab: Interrupted run recovery verification

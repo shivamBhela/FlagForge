@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.crypto import encrypt_secret, decrypt_secret
+from app.core.crypto import encrypt_secret, decrypt_secret, encrypt_webhook_secret
 from app.core.ssrf import validate_target_url, SSRFValidationError
 from app.models.organization import OrganizationMember, OrgRole
 from app.models.project import Project
@@ -138,7 +138,7 @@ async def create_connection(
         encrypted_token=encrypted_token,
         connection_type=conn_in.connection_type,
         status=initial_status,
-        webhook_secret=conn_in.webhook_secret.strip() if conn_in.webhook_secret else None,
+        webhook_secret=encrypt_webhook_secret(conn_in.webhook_secret.strip() if conn_in.webhook_secret else None),
         last_error=initial_error,
     )
     db.add(connection)
@@ -216,7 +216,7 @@ async def update_connection(
     if conn_in.token is not None:
         connection.encrypted_token = encrypt_secret(conn_in.token)
     if conn_in.webhook_secret is not None:
-        connection.webhook_secret = conn_in.webhook_secret.strip() if conn_in.webhook_secret else None
+        connection.webhook_secret = encrypt_webhook_secret(conn_in.webhook_secret.strip() if conn_in.webhook_secret else None)
 
     await db.commit()
     await db.refresh(connection)

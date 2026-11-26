@@ -1,71 +1,66 @@
 # FlagForge Final Competition Readiness Report
 
 **Assessment date:** 2026-11-26
-**Verdict:** Key local integrations are live and verified, but FlagForge is not fully complete or production-ready. GitHub PR creation and remote rollback remain disabled; native provider webhook delivery and clean-clone reproduction remain unverified.
+**Verdict:** The local application and documented QA workflows are substantially implemented and verified. FlagForge is **not production-ready**: clean-checkout installation is pending, external GitHub PR creation is blocked by missing credentials, rollback is disabled, and operational/security controls for shared deployment are incomplete.
 
-## Evidence-based status
+## Test area status
 
-| Capability | Classification | Evidence |
+| Test area | Status | Evidence |
 | --- | --- | --- |
-| Docker and local stack | **IMPLEMENTED AND LIVE-VERIFIED** | `docker compose config --quiet` passed. All 10 long-running services report healthy: seven FlagForge services plus Flagsmith app, Flagsmith database and task processor. Both migration jobs exited 0. `scripts/health-check.ps1` checks container and HTTP health. |
-| Database | **IMPLEMENTED AND LIVE-VERIFIED** | FlagForge Alembic current is `007_scan_job_idempotency (head)`; migration service was rebuilt/recreated and exited 0. Flagsmith migration exited 0 against its separate database. Volumes were preserved. |
-| Backend | **IMPLEMENTED AND AUTOMATED-TESTED** | `docker compose run --rm --no-deps --build api python -m pytest tests/ -q`: **31 passed**, one Starlette deprecation warning. Host pytest invocation fails before collection because host Python lacks `redis`; containerized project dependencies pass. |
-| Authentication and tenant security | **IMPLEMENTED AND AUTOMATED-TESTED** | Backend tests cover auth/JWT, RBAC and tenant isolation. Headed browser QA registered, logged in/out, created a dedicated org/project, and verified session persistence after reload. No customer or production data was used. |
-| Frontend routes and workflows | **IMPLEMENTED AND LIVE-VERIFIED** | Headed Chromium exercised all 18 routes beyond their loading states; registration, login/logout, org/project/environment creation, scanner, search, graph, monitor, risk/incident views, synthetic staging Chaos, cleanup preview and settings/navigation were interacted with. Browser console exceptions: none. Responsive viewport: 390px, no horizontal overflow on inspected pages. |
-| TypeScript and production build | **IMPLEMENTED AND AUTOMATED-TESTED** | `npx tsc --noEmit` passed. `npm run build` passed and generated the 20 application routes. |
-| Flagsmith connection and sync | **IMPLEMENTED AND LIVE-VERIFIED** | Official self-hosted Flagsmith `2.295.2` pinned by digest. A dedicated local project was discovered and synchronized. QA changed one test flag only in Staging; sync detected the change while Development and Production stayed unchanged. Repeated sync was idempotent. No production Flagsmith was contacted. |
-| Redis background jobs | **IMPLEMENTED AND LIVE-VERIFIED** | Worker consumes Redis Streams jobs; status persists in PostgreSQL. A repository scan was submitted while worker was stopped, observed pending, then completed after worker restart; one reference was stored. Retry/backoff, pending recovery, heartbeat health and clean shutdown are implemented. Current worker job types are Flagsmith sync and repository scan; other operations remain synchronous. |
-| OpenTelemetry ingestion | **IMPLEMENTED AND LIVE-VERIFIED** | Demo FastAPI traffic emitted OTLP/HTTP JSON through the Collector to the authenticated FlagForge receiver and persisted histogram/request/error data with isolated organization/project/Staging attribution. QA generated successful and controlled failed requests. Monitor no-data state distinguishes absence from healthy behavior. |
-| Runtime Monitor and Risk Engine | **IMPLEMENTED AND LIVE-VERIFIED** | On isolated QA telemetry, metrics included request counts, successes/errors, error rate and histogram-derived latency; Risk Engine returned `SUFFICIENT` telemetry confidence. Histogram bucket counts are merged before percentile derivation; percentiles are not averaged. Missing/insufficient input is not treated as healthy. |
-| Native Flagsmith webhook | **IMPLEMENTED AND AUTOMATED-TESTED; LIVE ATTEMPT BLOCKED** | Official docs describe environment-level `FLAG_UPDATED` events and raw-body HMAC-SHA256 in `X-Flagsmith-Signature`; implementation verifies that contract and replay handling. In Chrome, the local Flagsmith 2.295.2 Staging webhook form rejected the local FlagForge callback as an internal/private network target before sending its test request or creating a webhook. No live delivery is claimed. |
-| Chaos Lab | **SYNTHETIC / DEMO ONLY** | Browser ran a Staging scenario in the isolated QA organization. UI confirmed no load was sent and no remote flag changed; Production lock was active. |
-| Release Guardian / remote rollback | **DISABLED FOR SAFETY** | Risk evaluation and recommendations work. Remote rollback returns HTTP 501 and makes no provider change: safe write semantics and read-after-write verification are not established for this deployment. No rollback success is simulated. |
-| GitHub / Cleanup Studio PR | **BLOCKED BY MISSING CREDENTIALS** | Cleanup candidate evidence and local patch preview work. GitHub App credentials are not configured; PR creation returns HTTP 501. No GitHub repository or PR was contacted. Branch/commit/PR flow is not implemented. |
-| Security | **PARTIALLY VERIFIED** | Automated coverage includes password/auth, RBAC, tenant isolation, secret encryption/tamper handling, SSRF allowlists, production config and webhook validation. Local credentials were not printed or committed. Public TLS, external exposure, backups, key expiry/rotation, and an independent security review are not verified. |
-| Installation/reuse | **IMPLEMENTED, CLEAN-CLONE NOT VERIFIED** | Setup, `.env.example`, health and troubleshooting docs exist; the running deployment and migrations passed. A second-machine fresh checkout was not performed, so reproducibility beyond this Windows/Docker Desktop host remains unverified. |
+| Docker services | **Passed** | All 10 long-running services healthy; FlagForge and Flagsmith migrations exited 0; health script HTTP checks passed. Named volumes preserved. |
+| Backend | **Passed** | Containerized pytest: 35 passed; one Starlette/httpx deprecation warning. |
+| Database | **Passed** | Alembic head `009_encrypt_webhook_secrets`; separate Flagsmith PostgreSQL and successful provider migration. |
+| Authentication | **Passed** | Backend auth/JWT/RBAC/tenant tests; headed browser registration, persistence, logout/login. |
+| Frontend routes | **Passed** | Headed Chromium exercised all 18 route experiences beyond initial loading. |
+| Browser workflows | **Passed** | Org/project/environment creation, synthetic seed, scanner/search, flags/filter, dependencies, monitoring, risk, incidents, cleanup preview, navigation and mobile width. No uncaught page errors or HTTP 5xx. |
+| Flagsmith live connection | **Live-verified** | Official pinned local 2.295.2 Management API. Real project/environment/flag discovery and synchronization were previously verified in QA. |
+| Synchronization | **Live-verified** | Real Staging test-flag state change was detected by sync; Development and Production were not modified. Repeated sync was idempotent. |
+| Webhooks | **Live-verified locally** | Signed provider test event and two real Staging flag changes (enable/restore) processed and synchronized. Test flag restored disabled; temporary webhook removed; signing secret cleared. Provider retry/outage behavior unverified. |
+| Chaos Lab | **Synthetic / demo only** | Browser scenario explicitly identifies synthetic Staging simulation; no load, no provider mutation. |
+| Runtime monitoring | **Live-verified with demo traffic** | Demo-app OTLP traversed Collector and authenticated ingestion into tenant-attributed storage; Monitor and Risk Engine used persisted histogram data. Not customer traffic. |
+| Release Guardian | **Implemented; rollback disabled for safety** | Risk evaluation works. Rollback endpoint returns explicit HTTP 501 with no provider mutation because race-safe conditional-write behavior is not established. |
+| Cleanup Studio / GitHub | **Implemented; live use blocked by missing credentials** | Reviewed real-file diff, explicit approval and mocked API/tenant tests cover separate branch/PR behavior. No GitHub credentials or external repository were contacted. |
+| Security | **Partially verified** | Secret encryption, JWT/RBAC/tenant tests, SSRF checks, signed webhook validation, loopback-only ports and zero npm audit findings. No independent security audit, public TLS, backup restore or HA test. |
+| Clean-checkout installation | **Pending** | Current Windows/Docker deployment passed. A clean isolated checkout run remains to be completed; a second physical host is unavailable. |
 
-## Browser evidence
+## Commands and artifacts
 
-Screenshots and route captures are in the QA workspace at `outputs/flagforge-browser-qa/` (including desktop pages, 390px mobile flags, graph, chaos and cleanup preview). Browser run used the actual local `http://localhost:3000` application. The browser QA project is isolated from the existing Flagsmith test project. The monitor initially rendered its correct no-data state; subsequent dedicated demo traffic was sent only to a QA Staging telemetry project.
+- `docker compose config --quiet` — passed for default and isolated project-name configurations.
+- `scripts/health-check.ps1` — passed.
+- `docker compose run --rm --no-deps --build api python -m pytest tests/ -v` — 35 passed.
+- `npx tsc --noEmit` — passed.
+- `npm run build` — passed; Next.js 16.4.6 generated 20 application routes.
+- `npm audit` and `npm audit --omit=dev` — zero vulnerabilities.
+- `npm run test:e2e -- --headed --reporter=list` — 1 passed against the rebuilt container.
+- Supplemental `npx eslint src` — failed with 34 source findings; see [end-to-end report](END_TO_END_TEST_REPORT.md). These findings remain visible.
 
-## Real versus simulated integrations
+Browser screenshots and Playwright traces are in the ignored `frontend/test-results/` and `frontend/playwright-report/` folders. No credentials or generated secrets are committed.
 
-- **Real:** local official Flagsmith Management API connection, feature discovery/synchronization and Staging-only state change; Redis job consumption and worker restart recovery; demo-app → OTel Collector → authenticated API → persisted telemetry → Monitor/Risk data path.
-- **Automated only:** provider-shaped webhook HMAC validation/replay tests; Flagsmith adapter contract mocks in unit tests. Flagsmith's local UI blocked the live callback because it targets an internal/private address; its test request was not sent and the webhook was not created.
-- **Synthetic/demo only:** Chaos Lab and its demo samples. They do not mutate remote flags, send load, or represent production telemetry.
-- **Unavailable:** GitHub App authentication/PR and actual remote rollback.
-
-## Security and data handling
-
-QA used dedicated FlagForge accounts, organizations, projects and Staging telemetry. No production flags or customer data were modified. The earlier live Flagsmith state change was confined to the explicitly named local competition test project’s Staging environment. Docker volumes were retained. `.env`, local database files, browser account secrets and tokens were not added to Git.
-
-The checked-in local `.env` has an OpenTelemetry ingestion token configured; whether any non-expiring Flagsmith management key should be rotated remains a local operational follow-up. Do not expose this development Compose deployment publicly. Configure TLS, restricted ingress, backups, expiry and secret rotation before any shared deployment.
-
-## Known gaps and severity
+## Findings by severity
 
 ### High
 
-- **GitHub cleanup PR flow is not implemented.** GitHub App environment variables are absent and no PR path exists beyond local diff preview/HTTP 501.
-- **Rollback is disabled.** Provider write and read-after-write guarantees have not been safely established for the pinned deployment.
-- **Production hardening is incomplete.** This local stack has no verified external TLS, backup/restore drill, or independent security review.
+- Do not expose the local Compose stack publicly: production TLS/ingress, backup/restore, HA and independent security review are not evidenced.
+- GitHub PR flow has not contacted GitHub because credentials and an authorized external test repository are unavailable.
 
 ### Medium
 
-- **Native Flagsmith webhook delivery is unverified.** The local Flagsmith UI rejected the internal callback URL before sending a test request. No provider webhook was created and no actual callback was delivered. The provider's SSRF protection was left intact; no public relay or public exposure was used.
-- **Only two job types are worker-backed** (Flagsmith sync and repository scan). Dependency graph, aggregation, risk evaluation and cleanup are not queued jobs.
-- **Clean-clone onboarding on a second machine was not tested.** Host-only backend pytest also needs project dependencies installed; the Docker test suite passed.
-- **Chaos Lab remains a UI simulation**, not an actual traffic/flag-state chaos experiment.
+- Remote rollback is deliberately disabled. The Management API supports environment-scoped state updates, but no provider-side conditional-write guarantee was established for safe concurrent restoration.
+- Clean-checkout setup remains pending.
+- Provider webhook retry and callback-outage behavior remain unverified.
+- Supplemental ESLint reports 34 existing source findings.
 
 ### Low
 
-- Starlette emits a deprecation warning for `httpx` in its test client.
-- Windows host mappings for Redis/Postgres use 6380/5433 to avoid common local port conflicts.
+- Backend pytest emits one Starlette/httpx deprecation warning.
+- Chaos Lab is a synthetic simulation and must not be described as real load or remote-state chaos.
 
-## Competition criteria
+## External-test classification
 
-1. **Build on Flagsmith — demonstrated locally:** Official self-hosted image, pinned version/digest, real Management API discovery/sync and environment-specific state preservation passed.
-2. **Integrations and plugins — partial:** Flagsmith, Redis jobs, and OTel ingestion are live-verified; webhook is test-only; GitHub is unavailable without credentials and implementation.
-3. **Developer tools — partial:** Scanner, graph, Monitor, deterministic risk, synthetic Chaos and cleanup preview are exercised. Real GitHub PR and verified remote rollback are not available.
-4. **Easy to reuse — partial:** Docker setup, environment template, setup/health scripts and docs are present, but no clean second-machine installation or production operations drill has been evidenced.
+- **Real external-style integration:** local official Flagsmith API and webhook delivery over the private Compose network.
+- **Mocked:** GitHub App/PAT API contract and pull-request workflow tests.
+- **Synthetic/demo:** Chaos scenarios and demo-app telemetry.
+- **Unavailable:** GitHub live repository/PR lifecycle due missing credentials.
+- **Disabled:** remote rollback.
 
-Do not present this evidence as full platform completion or production readiness.
+Full evidence and remaining gaps are tracked in the [end-to-end test report](END_TO_END_TEST_REPORT.md), [known limitations](KNOWN_LIMITATIONS.md), [installation verification report](INSTALLATION_VERIFICATION_REPORT.md) and [security review](SECURITY_REVIEW.md).

@@ -1,30 +1,30 @@
 # Known Limitations
 
-This file distinguishes working local demonstrations from incomplete production capabilities. See the [final competition readiness report](FINAL_COMPETITION_READINESS_REPORT.md) for evidence and test dates.
+This report separates live local verification from mocked, synthetic and unavailable integrations. See the [final readiness report](FINAL_COMPETITION_READINESS_REPORT.md) for current evidence.
 
 ## High
 
-- **GitHub PR workflow — not implemented.** Cleanup Studio can show a local patch preview only. There is no GitHub App installation, repository authorization, branch/commit/PR API flow, PR persistence, or status refresh. GitHub credentials are not configured. The endpoint returns HTTP 501 and does not mutate a repository.
-- **Remote rollback — disabled for safety.** Release Guardian provides deterministic risk assessment and recommendations. It does not write Flagsmith state. The endpoint returns HTTP 501 until an environment-scoped provider mutation, approval, audit, locking and read-after-write flow is verified against the pinned Flagsmith instance.
-- **Production deployment hardening — incomplete.** Compose is intended for local demonstration. External TLS, public ingress controls, durable backup/restore drills, key rotation/expiry policy, HA and independent penetration testing are not evidenced. Do not expose this stack publicly.
+- **Production deployment hardening is incomplete.** This Compose stack is local-development oriented. Public TLS/ingress, backup and restore drills, high availability, key rotation/expiry procedures and an independent security review have not been verified. Do not expose this stack publicly.
+- **GitHub PR creation is implemented but live use is unverified.** No GitHub App installation or authorized test repository credentials are configured. Authentication, repository listing and PR lifecycle are covered by mocked tests only; no external repository was contacted.
 
 ## Medium
 
-- **Native Flagsmith webhook — not live-verified.** Provider documentation specifies environment-level `FLAG_UPDATED` delivery signed by HMAC-SHA256 over the raw UTF-8 body in `X-Flagsmith-Signature`. FlagForge validates the contract and has unit coverage. During browser QA, Flagsmith 2.295.2 rejected the local receiver URL as an internal/private network target before its test request was sent; no webhook was created and no delivery is claimed. The provider's SSRF protection remains enabled, and no public relay was used.
-- **Worker scope is limited.** Redis Streams jobs currently execute Flagsmith sync and repository scans, with durable status, retry/backoff and restart recovery. Dependency graph processing, telemetry aggregation, risk evaluation and cleanup analysis remain synchronous.
-- **Chaos Lab is a simulation.** It does not send load, change a Flagsmith flag or prove state restoration.
-- **Reuse beyond this machine is unproven.** Setup and troubleshooting docs exist, but a fresh clone/installation on a second machine was not tested. Host pytest also requires installing backend dependencies; containerized pytest passed.
-- **GitHub configuration is absent.** The local `.env` contains no configured GitHub App ID or private key. No external repository was accessed.
+- **Remote rollback is disabled for safety.** The pinned Flagsmith API accepts environment-scoped feature-state writes, but this deployment has not established a conditional-write/concurrency guarantee that would let FlagForge promise race-safe restoration after an incident. The Guardian endpoint returns HTTP 501 without mutating the provider. Risk evaluation remains advisory.
+- **Worker job coverage is limited.** Redis Streams handlers cover Flagsmith sync and repository scans. Dependency graph generation, telemetry aggregation, risk evaluation and cleanup analysis remain synchronous local operations.
+- **Chaos Lab is synthetic.** It changes no provider state and sends no load. Its UI identifies the scenario as simulated and confines the scenario label to Staging.
+- **Clean-checkout installation is not yet evidenced.** The default local deployment is verified on this Windows/Docker Desktop host; the isolated fresh-checkout run remains pending. A second physical machine was not available.
+- **Flagsmith retry semantics are not fully verified.** A real provider test event and real Staging flag changes were delivered and processed. Provider retry/backoff behavior under callback outage and duplicate provider retry delivery were not tested.
+- **Provider-specific rollback and external GitHub lifecycle are unverified.** No remote rollback is enabled and no GitHub credentials were available.
 
 ## Low
 
-- The backend suite reports a Starlette deprecation warning about its `httpx` test-client integration.
-- Default host ports 5433 and 6380 are nonstandard to avoid clashing with common existing PostgreSQL/Redis services.
-- Browser QA used synthetic sample records for scanner/chaos/cleanup screens where noted; those must not be represented as live provider or customer data.
+- The backend suite emits a Starlette/httpx test-client deprecation warning.
+- Compose defaults use nonstandard local PostgreSQL and Redis host ports to avoid common service collisions; the setup script now checks configured host ports.
+- Browser QA and scanner/chaos/cleanup examples use synthetic QA records where identified. They are not customer or production data.
 
 ## Explicitly unverified
 
-- Native webhook live delivery, duplicate provider retry behavior and provider-side failure retry. The local UI's private-network URL rejection was observed in Chrome, but no callback request was sent.
-- GitHub authentication, branch creation, commit, PR lifecycle and webhooks.
-- Flagsmith provider-side rollback mutation and exact environment-state restoration.
-- Public TLS, backup restoration, multi-node deployment, load testing and external security review.
+- GitHub App/token authentication against GitHub, authorized repository listing, actual branch/commit/PR creation and PR status refresh.
+- Provider conditional-write semantics for rollback under concurrent changes.
+- Flagsmith webhook delivery retries and outage recovery behavior.
+- Public TLS, backup restore, multi-node deployment, production load and independent penetration testing.

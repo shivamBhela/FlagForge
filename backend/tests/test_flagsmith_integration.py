@@ -1,6 +1,7 @@
 import hmac
 import hashlib
 import json
+import uuid
 import pytest
 from unittest.mock import patch, AsyncMock
 from app.services.flagsmith_client import FlagsmithClient
@@ -75,6 +76,23 @@ def test_flagsmith_connection_lifecycle_and_security(client):
         assert "token" not in conn_data
         assert "encrypted_token" not in conn_data
         conn_id = conn_data["id"]
+
+        import asyncio
+        from sqlalchemy import select
+        from app.core.crypto import decrypt_webhook_secret
+        from app.models.flagsmith import FlagsmithConnection
+        from conftest import TestingSessionLocal
+
+        async def read_stored_webhook_secret():
+            async with TestingSessionLocal() as session:
+                row = (await session.execute(select(FlagsmithConnection).where(
+                    FlagsmithConnection.id == uuid.UUID(conn_id)
+                ))).scalar_one()
+                return row.webhook_secret
+
+        stored_secret = asyncio.run(read_stored_webhook_secret())
+        assert stored_secret != conn_payload["webhook_secret"]
+        assert decrypt_webhook_secret(stored_secret) == conn_payload["webhook_secret"]
 
     # 4. List connections for organization
     res_list = client.get(f"/api/v1/flagsmith/organizations/{org_id}/flagsmith/connections", headers=headers)

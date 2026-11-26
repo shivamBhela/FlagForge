@@ -55,7 +55,7 @@ export default function IncidentsPage() {
             <span>Incidents & Post-Mortem Audit Trail</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Auditable incident logs, verified rollback actions, and hybrid AI explanations.
+            Auditable incident records, rollback history (when available), and advisory explanations.
           </p>
         </div>
       </div>

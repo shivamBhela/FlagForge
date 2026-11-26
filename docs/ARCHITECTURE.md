@@ -29,4 +29,10 @@ FlagForge talks to supported Flagsmith Management API endpoints and stores its s
 
 ## Current flow boundaries
 
-Manual Flagsmith sync currently runs synchronously from the FlagForge API request. It tests the Management API credential, retrieves projects/environments/features/states, and writes idempotent snapshots to FlagForge Postgres. The displayed FlagForge worker service remains a placeholder and is not in this sync path. The Collector receives OTLP and exposes transformed Prometheus metrics; FlagForge does not yet persist those metrics into its tenant telemetry tables. These are open implementation gaps, not demonstrated end-to-end features.
+Flagsmith Management API calls use the configured service DNS name and are restricted by FlagForge's outbound host allowlist. Sync is idempotent and can be queued through the Redis Streams worker, whose job state is persisted in FlagForge Postgres. Repository scanning uses the same durable job mechanism. The worker has restart recovery, bounded retry/backoff and health reporting.
+
+The demo app sends OTLP/HTTP JSON through the Collector to FlagForge's authenticated ingestion endpoint. The API persists request/error counts and histogram buckets with organization, project, service and environment attribution. Runtime Monitor derives latency percentiles from merged buckets, and the deterministic Risk Engine uses the persisted observations. The sample app is an isolated QA/demo source, not customer traffic.
+
+Native Flagsmith environment webhooks use a signed raw-body callback. The local Compose deployment trusts only the exact `api.flagforge.local` hostname using Flagsmith's supported `SSRF_ALLOWED_HOSTS` setting; the provider SSRF validator remains enabled for other hosts. A signed provider test event and two Staging flag updates were received, processed and synchronized in the local QA deployment. The temporary webhook and signing secret were removed and the test flag was restored.
+
+GitHub cleanup PR support requires a configured GitHub App or authorized fine-grained token. It creates a reviewed single-file change on a separate branch and opens a PR without merging. No external GitHub credentials are configured in this environment. Remote rollback stays disabled because the provider API does not provide the conditional-write/concurrency guarantee needed to promise race-safe restoration.

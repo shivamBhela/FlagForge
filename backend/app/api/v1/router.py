@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     cleanup,
     seed,
     jobs,
+    github,
 )
 
 api_router = APIRouter()
@@ -34,4 +35,5 @@ api_router.include_router(incidents.router, tags=["incidents"])
 api_router.include_router(cleanup.router, tags=["cleanup"])
 api_router.include_router(seed.router, tags=["seed"])
 api_router.include_router(jobs.router, tags=["background jobs"])
+api_router.include_router(github.router, tags=["GitHub integration"])
 
