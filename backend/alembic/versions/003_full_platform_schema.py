@@ -90,7 +90,7 @@ def upgrade() -> None:
         sa.Column('source_type', sa.Enum('FLAG', 'COMPONENT', 'SERVICE', 'API', name='nodetype'), nullable=False),
         sa.Column('target_id', sa.String(length=255), nullable=False),
         sa.Column('target_name', sa.String(length=255), nullable=False),
-        sa.Column('target_type', sa.Enum('FLAG', 'COMPONENT', 'SERVICE', 'API', name='nodetype_target'), nullable=False),
+        sa.Column('target_type', sa.Enum('FLAG', 'COMPONENT', 'SERVICE', 'API', name='nodetype'), nullable=False),
         sa.Column('edge_type', sa.Enum('EXPLICIT', 'INFERRED', 'MANUAL', name='edgetype'), nullable=False),
         sa.Column('confidence', sa.Float(), nullable=False, server_default='0.85'),
         sa.Column('evidence', sa.Text(), nullable=True),

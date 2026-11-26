@@ -27,11 +27,11 @@ class DependencyEdge(Base, UUIDMixin, TimestampMixin):
 
     source_id: Mapped[str] = mapped_column(String(255), nullable=False)
     source_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    source_type: Mapped[NodeType] = mapped_column(SQLEnum(NodeType), nullable=False)
+    source_type: Mapped[NodeType] = mapped_column(SQLEnum(NodeType, name="nodetype"), nullable=False)
 
     target_id: Mapped[str] = mapped_column(String(255), nullable=False)
     target_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    target_type: Mapped[NodeType] = mapped_column(SQLEnum(NodeType), nullable=False)
+    target_type: Mapped[NodeType] = mapped_column(SQLEnum(NodeType, name="nodetype"), nullable=False)
 
     edge_type: Mapped[EdgeType] = mapped_column(SQLEnum(EdgeType), default=EdgeType.INFERRED, nullable=False)
     confidence: Mapped[float] = mapped_column(Float, default=0.85, nullable=False)

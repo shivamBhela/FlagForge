@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 from app.core.crypto import encrypt_secret, decrypt_secret
 from app.core.ssrf import validate_target_url, SSRFValidationError
 
@@ -44,3 +45,17 @@ def test_ssrf_permits_public_flagsmith():
 
     valid_cloud = validate_target_url("https://api.flagsmith.com/api/v1")
     assert valid_cloud == "https://api.flagsmith.com/api/v1"
+
+
+def test_ssrf_allows_only_explicitly_allowlisted_private_service_host():
+    private_dns_answer = [(None, None, None, None, ("172.22.0.8", 8000))]
+    with patch("app.core.ssrf.socket.getaddrinfo", return_value=private_dns_answer):
+        url = "http://flagsmith:8000/api/v1"
+        assert validate_target_url(url, allowed_private_hosts={"flagsmith"}) == url
+        with pytest.raises(SSRFValidationError, match="private network"):
+            validate_target_url(url)
+
+        metadata_answer = [(None, None, None, None, ("169.254.169.254", 80))]
+    with patch("app.core.ssrf.socket.getaddrinfo", return_value=metadata_answer):
+        with pytest.raises(SSRFValidationError, match="metadata"):
+            validate_target_url("http://flagsmith/latest/meta-data", allowed_private_hosts={"flagsmith"})

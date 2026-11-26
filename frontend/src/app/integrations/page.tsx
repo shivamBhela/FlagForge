@@ -32,9 +32,9 @@ export default function IntegrationsPage() {
 
   // Modal & Form State
   const [showAddModal, setShowAddModal] = useState(false);
-  const [connType, setConnType] = useState<"CLOUD" | "SELF_HOSTED">("CLOUD");
-  const [name, setName] = useState("Flagsmith Cloud");
-  const [apiUrl, setApiUrl] = useState("https://api.flagsmith.com/api/v1");
+  const [connType, setConnType] = useState<"CLOUD" | "SELF_HOSTED">("SELF_HOSTED");
+  const [name, setName] = useState("Flagsmith Local");
+  const [apiUrl, setApiUrl] = useState("http://flagsmith:8000/api/v1");
   const [token, setToken] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [testing, setTesting] = useState(false);
@@ -115,7 +115,7 @@ export default function IntegrationsPage() {
       });
       setSuccessMsg(`Successfully connected to Flagsmith (${name})`);
       setShowAddModal(false);
-      setName("Flagsmith Cloud");
+      setName("Flagsmith Local");
       setToken("");
       setWebhookSecret("");
       setTestResult(null);
@@ -436,8 +436,8 @@ export default function IntegrationsPage() {
                     type="button"
                     onClick={() => {
                       setConnType("SELF_HOSTED");
-                      setApiUrl("https://flagsmith.example.com/api/v1");
-                      setName("Self-Hosted Cluster");
+                      setApiUrl("http://flagsmith:8000/api/v1");
+                      setName("Flagsmith Local");
                     }}
                     className={`p-3 rounded-lg border text-left flex items-center gap-2.5 transition ${
                       connType === "SELF_HOSTED"
@@ -447,8 +447,8 @@ export default function IntegrationsPage() {
                   >
                     <Server className="w-4 h-4 text-purple-400" />
                     <div>
-                      <div className="text-xs font-bold">Self-Hosted</div>
-                      <div className="text-[10px] text-slate-400">Custom enterprise URL</div>
+                      <div className="text-xs font-bold">Flagsmith Local</div>
+                      <div className="text-[10px] text-slate-400">Official self-hosted deployment</div>
                     </div>
                   </button>
                 </div>
@@ -478,10 +478,10 @@ export default function IntegrationsPage() {
                   value={apiUrl}
                   onChange={(e) => setApiUrl(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-[#151e2e] border border-[#1e293b] text-white text-xs font-mono focus:outline-none focus:border-blue-500"
-                  placeholder="https://api.flagsmith.com/api/v1"
+                  placeholder={connType === "SELF_HOSTED" ? "http://flagsmith:8000/api/v1" : "https://api.flagsmith.com/api/v1"}
                 />
                 <p className="text-[10px] text-slate-500 mt-1">
-                  API-side SSRF checks block loopback and private network targets. Use a reachable HTTPS host name for self-hosted deployments.
+                  In Docker, use the Flagsmith service name so the API can reach it on the private Compose network. Only explicitly allowlisted service hostnames bypass the private-network SSRF block; loopback and metadata addresses remain blocked.
                 </p>
               </div>
 

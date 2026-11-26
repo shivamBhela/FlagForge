@@ -2,6 +2,15 @@ import pytest
 from conftest import TestingSessionLocal
 from app.services.scanner import CodeScanner
 from app.services.dependency_engine import DependencyEngine
+from app.models.dependency_intelligence import DependencyEdge
+
+
+def test_dependency_edge_node_columns_share_the_postgres_enum():
+    source_type = DependencyEdge.__table__.c.source_type.type
+    target_type = DependencyEdge.__table__.c.target_type.type
+
+    assert source_type.name == "nodetype"
+    assert target_type.name == source_type.name
 
 
 def test_code_scanner_and_dependency_graph(client):

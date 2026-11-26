@@ -1,67 +1,73 @@
-# FlagForge final QA and competition readiness report
+# FlagForge Self-Hosted Flagsmith Verification Report
 
-**Assessment date:** 2026-11-25
-**Verdict:** Local application workflows verified with isolated SQLite and synthetic data; full-stack and live-provider readiness are not established.
+**Assessment date:** 2026-11-26
+**Verdict:** The official local Flagsmith deployment and live FlagForge synchronization work. Several platform capabilities remain synthetic, unavailable, or unverified; this is not a production-readiness claim.
 
-## Executive assessment
-
-FlagForge has a usable frontend and API for core organization, project, environment, scanning, graph, and risk workflows. The backend tests exercise tenant/RBAC boundaries and mocked Flagsmith behavior. The browser run created an isolated QA account, organization, project, and staging environment, then exercised application routes and synthetic demo workflows. Findings from the audit were corrected where the previous UI or API claimed behavior that did not exist.
-
-This is not a production-ready deployment. Docker Desktop was unavailable, so PostgreSQL/Redis/Collector/demo-app and the seven-service health state could not be established. There were no Flagsmith credentials, so no live connection, synchronization, or provider-side mutation was attempted. Background processing, native provider webhooks, OTLP-to-risk ingestion, GitHub PR creation, and remote rollback have concrete implementation gaps listed below.
-
-## Verification matrix
+## Result summary
 
 | Test area | Status | Evidence |
 | --- | --- | --- |
-| Docker services | **Blocked / not run** | `docker compose config --quiet` passed. `docker compose up --build -d` was attempted and failed because the Docker CLI could not connect to `npipe:////./pipe/dockerDesktopLinuxEngine`; Docker Desktop was not found at the standard install paths checked. No service health evidence is available. |
-| Backend | **Passed** | `PYTHONPATH=backend python -m pytest backend/tests/ -v`: 25 passed. Includes authentication, organization/project/environment lifecycle, RBAC, cross-tenant isolation, scanner, dependency graph, crypto/SSRF, health probes, mocked Flagsmith sync, synthetic Chaos, risk behavior, and cleanup boundary. |
-| Database | **Passed locally / Docker DB unverified** | Alembic applied all three migrations to `head` on an isolated SQLite QA database; schema tests passed. PostgreSQL migrations/runtime were not exercised because Docker was unavailable. |
-| Authentication | **Passed** | Pytest registration/login test passed. Headed Chromium registered a QA user, retained session through reload, logged out, and the final login rerun is recorded with browser artifacts. |
-| Frontend routes | **Passed locally** | Headed Chromium received HTTP 200 for the tested routes: overview, projects, create project, project detail, create organization, flags, scanner, dependencies, Chaos, monitor, Guardian, incidents, cleanup, integrations, policies, settings, login, and register. Route opening alone is not treated as workflow verification. |
-| Browser workflows | **Passed with limitations** | Production Next.js build served to headed Chromium: 33 checks passed, 26 route navigations returned HTTP 200, 0 console errors, 0 page exceptions, 0 HTTP errors, and 6 navigation/preload cancellations. Workflows covered registration, organization/project/environment creation, reload persistence, synthetic demo seed, flag search, staging-only Chaos, risk boundary messaging, Flagsmith form validation/default URL, navigation, mobile overview overflow check, logout, and login again. See screenshots and JSON under the task workspace `outputs/browser-artifacts/`. No live Flagsmith credentials were entered. |
-| Flagsmith live connection | **Skipped** | No credentials supplied/configured. No live provider request was made. |
-| Flagsmith mocked integration | **Passed** | Mock HTTP tests verify `Api-Key` Management API authentication, Cloud URL normalization, pagination, same-origin pagination safety, connection lifecycle, idempotent sync, and webhook processing. Official API references: [Management API](https://docs.flagsmith.com/integrating-with-flagsmith/flagsmith-api-overview/management-api), [authentication](https://docs.flagsmith.com/integrating-with-flagsmith/flagsmith-api-overview/management-api/authentication). |
-| Synchronization | **Passed mocked / live skipped** | Mocked sync lifecycle and idempotency tests passed; no actual remote flags or changed test flag were observed. |
-| Webhooks | **Partial / provider compatibility unverified** | Unit test verifies FlagForge's configured HMAC contract and rejects missing secret. Native Flagsmith delivery/signature semantics were not exercised against a live instance. |
-| Chaos Lab | **Passed synthetic-only** | Browser and backend verified staging scenario output is labeled synthetic and does not claim restoration. No remote mutation or production scenario was run. |
-| Runtime monitoring | **Partial / not end-to-end** | Aggregate telemetry API and risk handling are covered in backend tests. The configured Collector is not connected to the FlagForge aggregate store; the UI correctly says configured/not probed, and risk refuses favorable evaluation with insufficient telemetry. |
-| Release Guardian | **Partial** | Risk policy/evaluation exercised; missing telemetry requires manual approval. Remote rollback explicitly returns HTTP 501 and the UI communicates it is disabled. No rollback was claimed or attempted. |
-| Cleanup Studio | **Partial** | Local diff proposal behavior is present. GitHub PR creation explicitly returns HTTP 501; a regression test verifies no fabricated PR URL is returned. |
-| TypeScript | **Passed** | `npx tsc --noEmit` exited 0. |
-| Next.js production build | **Passed after isolated rerun** | `npm run build` succeeded after stopping the dev server. An earlier concurrent build/dev attempt corrupted the shared `.next` development output and failed; this was an execution collision, not a reproduced production build failure. |
+| Docker services | **Passed** | All 10 long-running services healthy; `migrate` and `flagsmith-migrate-db` exited 0. The health script passed HTTP probes for API, web, demo app, Flagsmith, and Collector health. |
+| Backend | **Passed** | `$env:PYTHONPATH='backend'; python -m pytest backend/tests/ -q`: 27 passed. Includes auth/JWT, RBAC/tenant boundaries, scanner/dependency graph, Flagsmith, webhook validation, chaos, telemetry, risk, and cleanup coverage. |
+| Database | **Passed** | FlagForge Alembic revision `004_unify_dependency_node_enum`; Flagsmith migrations exited 0. The new PostgreSQL enum migration repaired the graph endpoint on the existing database. |
+| Authentication | **Passed, scoped** | Playwright registered a QA account, created its isolated organization/project, and verified authentication persisted after reload. Backend auth tests passed. Invalid email validation displayed a readable field error after the UI fix. Logout/re-login was not repeated in Playwright. |
+| Frontend routes | **Passed, route sweep** | Headed Playwright visited all 18 application paths, each returned HTTP 200 and rendered beyond its loading state. No page exceptions. The mobile Flags view had no horizontal overflow at 390px. |
+| Browser workflows | **Passed with limits** | Registered an isolated QA account, created an organization/project with Development, Production, and Staging environments, searched synchronized flags, previewed a cleanup patch, and ran a synthetic Staging-only Chaos Lab scenario. Screenshots are in the QA workspace output folder, not the repository. |
+| Flagsmith live connection | **Passed locally** | Official `docker.flagsmith.com/flagsmith/flagsmith:2.295.2` image pinned to digest `sha256:48905c664152d8ae2c843ec9cee72ff197e7caff6e91b959bb851a235915ea35`. FlagForge connection test returned `ok=true` and discovered one project. |
+| Synchronization | **Passed live** | Local Flagsmith flags were created in the dedicated QA project and synchronized. FlagForge UI reported `12 created, 0 updated, 8 unchanged`; search found the new flags. An earlier live state change turned `flagforge_live_test` OFF only in Staging; FlagForge then showed Development ON, Production ON, Staging OFF. Replay sync was idempotent. |
+| Webhooks | **Partial / live delivery skipped** | Internal HMAC validation tests pass. No webhook secret was configured and native Flagsmith delivery/signature compatibility was not exercised. |
+| Chaos Lab | **Passed, synthetic only** | Ran a `staging` scenario in the isolated Playwright QA organization. The UI confirmed no traffic was sent and no remote flag changed. Production was locked. This is not a real load or provider-state chaos test. |
+| Runtime monitoring | **Partial** | Local synthetic seeded metrics rendered (1,250 requests, 1.40% error rate, 142ms p95). Collector health passed, but Collector OTLP data is not bridged into the FlagForge telemetry store; live ingestion and percentile accuracy remain unverified. |
+| Risk Engine / Release Guardian | **Passed, advisory only** | The seeded QA flag evaluated to a 62/100 HIGH risk score with manual approval required. The UI/API explicitly disable remote rollback; no rollback was attempted. |
+| Dependency graph | **Passed after fix** | A real local QA scan stored four references; after migration 004, the live graph endpoint returned HTTP 200 with 6 nodes and 5 edges and the browser displayed them. |
+| Cleanup Studio | **Passed, local preview** | Three synthetic stale-flag suggestions rendered and a local patch preview opened. GitHub PR creation remains unavailable and was not attempted. |
+| TypeScript / production build | **Passed** | `npx tsc --noEmit` and `npm run build` exited 0; Next.js generated all 20 listed routes. |
 | Compose configuration | **Passed** | `docker compose config --quiet` exited 0. |
-| Security | **Partial** | Pytest passed config-secret rejection, encryption tamper detection, SSRF matrix, webhook missing-secret rejection, and cross-tenant/RBAC coverage. Docker secrets, live TLS deployment, PostgreSQL/Redis runtime, and external security testing remain unverified. |
+| Security | **Partial** | Tests cover production secret checks, encryption/tamper handling, SSRF rules, webhook secret requirements, RBAC, and tenant isolation. The management key remained local, encrypted in FlagForge, and was never printed or committed. It was created with no expiry. TLS and external security review remain unverified. |
+
+## Verified local integration
+
+- Flagsmith `v2.295.2`, official image pinned by digest.
+- Dedicated local Flagsmith organization/project: `FlagForge Competition Demo`; environments: Development, Production, and Staging.
+- FlagForge connection uses `SELF_HOSTED` and `http://flagsmith:8000/api/v1` inside the Compose network.
+- A Staging-only change to `flagforge_live_test` was detected by synchronization; Production remained ON.
+- Additional local test flags: `new_dashboard`, `beta_analytics`, and `advanced_search`, all disabled by default.
+- No Flagsmith Cloud or production instance, customer data, external repository, or GitHub PR was used.
+
+## Fixes found during QA
+
+- The flags page expected nested project/environment objects, but the API returns flat `project_name`, `environment_name`, and `is_production` fields. The page now supports the API shape; Playwright contract verification shows the project and all environment labels instead of “Unknown Project”/“Local”.
+- FastAPI validation details arrived as an array and rendered as `[object Object]`. The API error formatter now displays readable field messages.
+- The root `lib/` ignore rule excluded required frontend API/auth source from Git; the rule now allows `frontend/src/lib/`, and both required files are included.
+- PostgreSQL graph writes failed because the migration gave `target_type` a different enum from `source_type`. Model metadata now shares `nodetype`; migration 004 repairs existing databases, and a regression test checks the shared enum name.
+- Startup fixes documented in the setup guide include the missing frontend `public/` directory, JSON list syntax for `FLAGSMITH_ALLOWED_HOSTS`, and the missing `email-validator` runtime package.
 
 ## Findings by severity
 
 ### High
 
-- **Background job execution is absent.** `backend/app/worker.py` is an explicit placeholder loop; it consumes no Redis queue. Any feature depending on asynchronous background jobs must not be described as operational.
-- **Runtime telemetry is not end-to-end.** The API accepts aggregate batches, but there is no demonstrated OpenTelemetry Collector-to-FlagForge ingestion path. Risk decisions should remain manual when telemetry is insufficient.
-- **Flagsmith provider behavior is unverified live.** Mocked Management API behavior is tested, but no credentials or reachable account were available. Live connection, project/environment discovery, flag synchronization, and change detection remain unverified.
+- The worker is still a healthy placeholder and logs that Redis job consumption is not implemented. Do not rely on background work.
+- Collector health is not proof of end-to-end telemetry ingestion; OTLP data is not connected to FlagForge’s telemetry store.
 
 ### Medium
 
-- **Remote rollback is intentionally unavailable.** The endpoint returns 501 until a real provider write and read-after-write verification exist. Do not use the product for automated release recovery.
-- **GitHub integration is unavailable.** Cleanup suggestions are local patch proposals; PR creation returns 501. No GitHub repository or PR was touched.
-- **Webhook compatibility is unverified.** FlagForge's HMAC receiver contract is tested internally, but no evidence confirms compatibility with native Flagsmith webhook delivery.
-- **Full Docker/PostgreSQL/Redis deployment is unverified.** Docker engine was not running/available. Compose syntax is valid, but no container health, migration-on-start, or inter-service behavior can be claimed.
-- **Self-hosted private URLs are blocked.** SSRF protection rejects local/private targets, limiting self-hosted FlagSmith instances to publicly routable HTTPS URLs under current behavior.
+- Release Guardian remote rollback returns HTTP 501 and is intentionally disabled in the UI.
+- GitHub PR creation is unavailable; cleanup only generated a local patch preview.
+- Native Flagsmith webhook compatibility and live provider delivery remain unverified.
+- The local Flagsmith management key has no expiry. It stayed local and encrypted, but should be revoked after the demo or replaced with a short-lived key before sharing.
+- Flagsmith Cloud, external TLS, and a second-machine fresh-clone setup were not tested.
 
 ### Low
 
-- **Browser hydration warning observed in development mode.** Chromium logged a React warning about an extra `style` attribute on a header input, with no page exceptions and no corresponding production build failure. It may originate from browser-side injection; source attribution is not established.
+- Host ports 5433 and 6380 avoid existing local PostgreSQL/Redis listeners; container networking keeps the standard service ports.
 
-## Scope and data safety
+## Evidence and artifacts
 
-Browser workflows used a dedicated QA user and organization with synthetic data in an isolated SQLite database under the task QA workspace. No production account, customer data, production flag, external repository, or real Flagsmith environment was modified. No tokens or test credentials were committed. Navigation-triggered `net::ERR_ABORTED` requests were canceled preloads/page fetches; they were separated from HTTP failures in the artifacts. One earlier browser harness run failed on an incorrect “Sign In” selector; a second run overlapped with a Next.js build and dev server and produced missing chunk errors. The final browser artifact should be used for authentication completion evidence.
+- Playwright route/browser screenshots: `outputs/flagforge-browser-qa/` in the QA workspace. Includes route captures, mobile Flags, synthetic Chaos Lab, cleanup preview, and the post-fix graph view.
+- `scripts/health-check.ps1` lists service health and HTTP checks.
+- Database revision: `004_unify_dependency_node_enum`.
+- Runtime logs contain expected HTTP 422 responses from deliberately invalid email validation. Playwright recorded no page exceptions; route-navigation `ERR_ABORTED` entries were browser navigation cancellations.
 
 ## Readiness decision
 
-**Competition evaluation:** suitable for a local demonstration of implemented and explicitly synthetic workflows, subject to the blockers above.
-
-**Production deployment:** not established. Do not describe FlagForge as fully working or production-ready until the Docker stack is verified, real Flagsmith integration is exercised safely, telemetry and worker paths are implemented and tested, and rollback/webhook/GitHub boundaries are resolved.
-
-## Browser artifacts
-
-Generated screenshots and structured run results are stored in `outputs/browser-artifacts/` in the task workspace. These include the overview, flags search, Chaos, Guardian, integrations, cleanup, monitor, and mobile views.
+The evidence supports **“official self-hosted Flagsmith deployed and live FlagForge synchronization verified locally.”** It does not support “fully working” or “production-ready.” Review [known limits and operations](INTEGRATIONS.md), [security notes](SECURITY.md), and [Docker setup](DOCKER_SETUP.md) before extending the deployment.

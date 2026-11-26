@@ -9,15 +9,17 @@ from cryptography.fernet import Fernet
 
 def test_production_config_rejects_known_development_secrets():
     with pytest.raises(ValueError, match="SECRET_KEY"):
-        Settings(APP_ENV="production")
+        Settings(_env_file=None, APP_ENV="production")
 
     with pytest.raises(ValueError, match="ENCRYPTION_KEY"):
         Settings(
+            _env_file=None,
             APP_ENV="production",
             SECRET_KEY="unique-production-secret-key-with-more-than-32-chars",
         )
 
     production = Settings(
+        _env_file=None,
         APP_ENV="production",
         SECRET_KEY="unique-production-secret-key-with-more-than-32-chars",
         ENCRYPTION_KEY=Fernet.generate_key().decode("ascii"),

@@ -2,7 +2,6 @@ import asyncio
 import httpx
 import pytest
 
-from app.core.config import settings
 from app.services.flagsmith_client import FlagsmithApiError, FlagsmithClient
 
 
@@ -24,7 +23,7 @@ def test_management_api_uses_official_cloud_host_and_auth_scheme(monkeypatch):
     monkeypatch.setattr("app.services.flagsmith_client.httpx.AsyncClient", client_factory)
 
     async def run_test():
-        client = FlagsmithClient(settings.FLAGSMITH_BASE_URL, "test-management-key")
+        client = FlagsmithClient("https://api.flagsmith.com/api/v1", "test-management-key")
         return client, await client.test_connection()
 
     client, result = asyncio.run(run_test())

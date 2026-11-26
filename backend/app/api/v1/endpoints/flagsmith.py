@@ -35,6 +35,7 @@ from app.api.deps import (
     require_org_member,
     require_org_admin,
 )
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -46,7 +47,7 @@ async def test_flagsmith_connection(
     """Tests Flagsmith instance reachability and credential validity before saving."""
     try:
         # Validate URL against SSRF
-        validate_target_url(request.api_url)
+        validate_target_url(request.api_url, allowed_private_hosts=settings.FLAGSMITH_ALLOWED_HOSTS)
     except SSRFValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -114,7 +115,7 @@ async def create_connection(
 ):
     """Creates a Flagsmith connection, encrypts credentials, tests API, and triggers initial sync."""
     try:
-        validate_target_url(conn_in.api_url)
+        validate_target_url(conn_in.api_url, allowed_private_hosts=settings.FLAGSMITH_ALLOWED_HOSTS)
     except SSRFValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -210,7 +211,7 @@ async def update_connection(
     if conn_in.name is not None:
         connection.name = conn_in.name.strip()
     if conn_in.api_url is not None:
-        validate_target_url(conn_in.api_url)
+        validate_target_url(conn_in.api_url, allowed_private_hosts=settings.FLAGSMITH_ALLOWED_HOSTS)
         connection.api_url = conn_in.api_url.strip()
     if conn_in.token is not None:
         connection.encrypted_token = encrypt_secret(conn_in.token)

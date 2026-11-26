@@ -31,6 +31,7 @@ class Settings(BaseSettings):
 
     # Management API host (the edge.api.flagsmith.com host serves SDK evaluations).
     FLAGSMITH_BASE_URL: str = "https://api.flagsmith.com/api/v1"
+    FLAGSMITH_ALLOWED_HOSTS: List[str] = []
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4318"
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
@@ -38,6 +39,13 @@ class Settings(BaseSettings):
     def assemble_cors_origins(cls, v):
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",") if i.strip()]
+        return v
+
+    @field_validator("FLAGSMITH_ALLOWED_HOSTS", mode="before")
+    @classmethod
+    def assemble_flagsmith_allowed_hosts(cls, v):
+        if isinstance(v, str):
+            return [host.strip().lower().rstrip(".") for host in v.split(",") if host.strip()]
         return v
 
     @model_validator(mode="after")

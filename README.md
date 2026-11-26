@@ -1,40 +1,29 @@
 # FlagForge
 
-FlagForge is a feature flag release management prototype built with Next.js, FastAPI, SQLAlchemy/Alembic, PostgreSQL, and Redis. It includes organization/project management, a code scanner, dependency graph, risk evaluation, synthetic Chaos Lab, telemetry aggregation, Flagsmith Management API synchronization, and cleanup diff previews.
+FlagForge is a feature-flag release intelligence prototype built on the official [self-hosted Flagsmith](https://github.com/Flagsmith/flagsmith) platform. Flagsmith and FlagForge have separate PostgreSQL databases and communicate through the supported Flagsmith Management API.
 
-## Current verification status
+## Start the local demonstration
 
-This repository has been exercised locally with SQLite, mocked Flagsmith API responses, and headed Chromium. The full backend suite and frontend type check pass. Docker services and live Flagsmith connectivity were not verified in this environment: the Docker Desktop engine was unavailable and no Flagsmith credentials were configured. The worker is a placeholder, OpenTelemetry is not wired end-to-end into FlagForge, GitHub PR creation is unavailable, and remote rollback is disabled. See [`docs/FINAL_COMPETITION_READINESS_REPORT.md`](docs/FINAL_COMPETITION_READINESS_REPORT.md) for evidence and limitations.
-
-## Local development
-
-Prerequisites: Python 3.11+, Node.js 18+, and Docker Compose for the full PostgreSQL/Redis stack. Copy `.env.example` to `.env` and replace development secrets before using data that matters. Never use the sample values in production.
+Requirements: Windows x64, Docker Desktop with Linux containers, Docker Compose v2, PowerShell 7, and at least 4 GB of memory available to Docker. Start Docker Desktop first.
 
 ```powershell
-docker compose up --build -d
-docker compose ps
+.\setup.ps1
 ```
 
-The API is at `http://localhost:8000`, the web app at `http://localhost:3000`, and the demo app at `http://localhost:8080`. The API liveness route is `/health`; `/api/v1/healthz` probes PostgreSQL and Redis and returns degraded when a required dependency is unavailable. Alembic migrations run from the backend container on startup; verify with `docker compose logs api` and `docker compose exec api alembic current`.
+If `.env` is absent, setup generates unique local secrets without displaying them. It validates Compose, builds and starts the combined stack, then checks services. Existing `.env` files are preserved.
 
-For host-based backend development:
+- Flagsmith dashboard: [http://localhost:8081](http://localhost:8081)
+- FlagForge dashboard: [http://localhost:3000](http://localhost:3000)
+- FlagForge API docs: [http://localhost:8000/api/v1/docs](http://localhost:8000/api/v1/docs)
+- Demo app: [http://localhost:8080](http://localhost:8080)
 
-```powershell
-$env:PYTHONPATH = "backend"
-python -m pip install -r backend/requirements.txt
-python -m alembic -c backend/alembic.ini upgrade head
-python -m uvicorn app.main:app --app-dir backend --reload --port 8000
-```
+Create a dedicated demo organization/project and Development/Staging environments in Flagsmith, then connect its Organization API key from FlagForge Integrations. Follow [`docs/FLAGSMITH_SETUP.md`](docs/FLAGSMITH_SETUP.md) for the live sync walkthrough.
 
-For frontend development:
+The Compose stack includes seven FlagForge services plus the official Flagsmith application, its separate PostgreSQL, migration job, and task processor. Flagsmith image `v2.295.2` is pinned by tag and verified OCI digest. Host Redis maps to port 6380 to avoid a common existing Redis port conflict; containers use service DNS.
 
-```powershell
-cd frontend
-npm ci
-npm run dev
-```
+Check services with `./scripts/health-check.ps1`. Stop only this project while preserving its data with `./scripts/stop.ps1`. Restart with `docker compose up -d`. These scripts do not remove volumes or stop unrelated Compose projects.
 
-## Tests and build
+## Tests
 
 ```powershell
 $env:PYTHONPATH = "backend"
@@ -44,18 +33,14 @@ npx tsc --noEmit
 npm run build
 ```
 
-Flagsmith Cloud uses the Management API at `https://api.flagsmith.com/api/v1` with an organization Management API key. Credentials are entered through the Integrations screen and stored encrypted by the API. Live behavior depends on a reachable Flagsmith instance and valid credentials. Local/private self-hosted endpoints are blocked by SSRF protections; use a publicly routable HTTPS host.
+Mocks verify adapter contracts; they do not replace the live Flagsmith demonstration. The `worker` is currently a placeholder, OTLP telemetry is not persisted into FlagForge, remote rollback and GitHub PR creation return HTTP 501, and Chaos Lab remains synthetic-only. See [`docs/FINAL_COMPETITION_READINESS_REPORT.md`](docs/FINAL_COMPETITION_READINESS_REPORT.md) for current evidence and limitations.
 
-## Implemented behavior and boundaries
+## Documentation
 
-- Flagsmith connection checks, paginated project/environment/feature discovery, and synchronization are implemented and covered with mocked HTTP tests. Live provider compatibility remains unverified.
-- Webhook HMAC validation is a FlagForge-specific contract. Native Flagsmith webhook signature compatibility has not been verified.
-- Chaos Lab only produces synthetic records; it does not change remote flags or generate load, and does not claim restoration.
-- Risk evaluation requires sufficient telemetry for a favorable decision. Current telemetry ingestion accepts aggregate batches; the configured OpenTelemetry Collector is not an ingestion path into that store.
-- Release Guardian remote rollback returns HTTP 501 until a provider write and read-after-write verification are implemented.
-- Cleanup patch previews are local proposals. GitHub pull request creation returns HTTP 501 because no GitHub App integration is configured.
-- The `worker` service currently starts a placeholder loop and consumes no jobs.
-
-## Security notes
-
-Keep `.env` and provider tokens out of source control and logs. Use unique production secrets, TLS at public boundaries, backups for persistent databases, and an ingress policy appropriate for your deployment. Review [README_SELF_HOSTED.md](README_SELF_HOSTED.md) and [README_CLOUD.md](README_CLOUD.md) as deployment drafts; neither is a substitute for a deployment-specific security review.
+- [Flagsmith setup](docs/FLAGSMITH_SETUP.md)
+- [Docker setup](docs/DOCKER_SETUP.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Integrations](docs/INTEGRATIONS.md)
+- [Security](docs/SECURITY.md)
+- [Competition readiness report](docs/FINAL_COMPETITION_READINESS_REPORT.md)
+- [Official Flagsmith Docker guide](https://docs.flagsmith.com/deployment-self-hosting/hosting-guides/docker)

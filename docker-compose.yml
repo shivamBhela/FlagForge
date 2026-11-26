@@ -1,3 +1,32 @@
+name: flagforge
+
+# The Flagsmith services below follow the official v2.295.2 deployment file:
+# https://github.com/Flagsmith/flagsmith/blob/v2.295.2/docker-compose.yml
+# The image is pinned by release and digest. Flagsmith uses its own PostgreSQL
+# volume; it does not share FlagForge's database or Redis.
+x-flagsmith-env: &flagsmith-env
+  DATABASE_URL: postgresql://postgres:${FLAGSMITH_POSTGRES_PASSWORD:?Run setup.ps1 to create local secrets}@flagsmith-postgres:5432/flagsmith
+  USE_POSTGRES_FOR_ANALYTICS: "true"
+  ENVIRONMENT: production
+  DJANGO_ALLOWED_HOSTS: "*"
+  FLAGSMITH_DOMAIN: ${FLAGSMITH_DOMAIN:-localhost:8081}
+  DJANGO_SECRET_KEY: ${FLAGSMITH_DJANGO_SECRET_KEY:?Run setup.ps1 to create local secrets}
+  WAREHOUSE_CREDENTIALS_SECRET: ${FLAGSMITH_WAREHOUSE_CREDENTIALS_SECRET:?Run setup.ps1 to create local secrets}
+  TASK_RUN_METHOD: TASK_PROCESSOR
+  PROMETHEUS_ENABLED: "true"
+  EXPERIMENTATION_ENABLED: "true"
+  ENABLE_TASK_PROCESSOR_HEALTH_CHECK: "true"
+
+x-flagforge-env: &flagforge-env
+  APP_ENV: ${APP_ENV:-development}
+  SECRET_KEY: ${APP_SECRET_KEY:?Run setup.ps1 to create local secrets}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Run setup.ps1 to create local secrets}
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-flagforge}:${POSTGRES_PASSWORD:?Run setup.ps1 to create local secrets}@postgres:5432/${POSTGRES_DB:-flagforge}
+  REDIS_URL: redis://redis:6379/0
+  FLAGSMITH_BASE_URL: ${FLAGSMITH_BASE_URL:-http://flagsmith:8000/api/v1}
+  FLAGSMITH_ALLOWED_HOSTS: '${FLAGSMITH_ALLOWED_HOSTS:-["flagsmith"]}'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+
 services:
   web:
     build:
@@ -8,10 +37,30 @@ services:
     ports:
       - "${WEB_PORT:-3000}:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=${API_BASE_URL:-http://localhost:8000}
+      NEXT_PUBLIC_API_URL: ${API_BASE_URL:-http://localhost:8000}
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/ >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - flagforge-net
+
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: flagforge-migrate
+    command: ["alembic", "-c", "alembic.ini", "upgrade", "head"]
+    environment: *flagforge-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
     networks:
       - flagforge-net
 
@@ -23,25 +72,22 @@ services:
     restart: unless-stopped
     ports:
       - "${API_PORT:-8000}:8000"
-    environment:
-      - APP_ENV=${APP_ENV:-development}
-      - SECRET_KEY=${APP_SECRET_KEY:-default_secret_key_change_in_production}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-tU_hQ8z2fPj_eL7_X0v9Y4kW3rA6mB1nC5sD8eF2gH4=}
-      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://flagforge:flagforge_password@postgres:5432/flagforge}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - FLAGSMITH_BASE_URL=${FLAGSMITH_BASE_URL:-https://api.flagsmith.com/api/v1}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
+    environment: *flagforge-env
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      flagsmith:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 20s
     networks:
       - flagforge-net
 
@@ -50,19 +96,21 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: flagforge-worker
-    restart: unless-stopped
     command: ["python", "-m", "app.worker"]
-    environment:
-      - APP_ENV=${APP_ENV:-development}
-      - SECRET_KEY=${APP_SECRET_KEY:-default_secret_key_change_in_production}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-tU_hQ8z2fPj_eL7_X0v9Y4kW3rA6mB1nC5sD8eF2gH4=}
-      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://flagforge:flagforge_password@postgres:5432/flagforge}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    restart: unless-stopped
+    environment: *flagforge-env
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import redis; print('worker runtime ready')"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
     networks:
       - flagforge-net
 
@@ -73,16 +121,16 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-flagforge}
       POSTGRES_USER: ${POSTGRES_USER:-flagforge}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flagforge_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run setup.ps1 to create local secrets}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - flagforge_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flagforge} -d ${POSTGRES_DB:-flagforge}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
     networks:
       - flagforge-net
 
@@ -91,14 +139,14 @@ services:
     container_name: flagforge-redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-6380}:6379"
     volumes:
-      - redis_data:/data
+      - flagforge_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
     networks:
       - flagforge-net
 
@@ -107,11 +155,17 @@ services:
     container_name: flagforge-otel-collector
     restart: unless-stopped
     volumes:
-      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
     ports:
-      - "4317:4317" # OTLP gRPC receiver
-      - "4318:4318" # OTLP HTTP receiver
-      - "8889:8889" # Prometheus exporter metrics
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
+      - "13133:13133"
+    healthcheck:
+      test: ["CMD", "/otelcol-contrib", "validate", "--config=/etc/otelcol-contrib/config.yaml"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
     networks:
       - flagforge-net
 
@@ -122,21 +176,104 @@ services:
     container_name: flagforge-demo-app
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${DEMO_APP_PORT:-8080}:8080"
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      FLAGSMITH_BASE_URL: http://flagsmith:8000/api/v1
+      FLAGSMITH_ENVIRONMENT_KEY: ${FLAGSMITH_ENVIRONMENT_KEY:-}
     depends_on:
       api:
         condition: service_healthy
+      flagsmith:
+        condition: service_healthy
       otel-collector:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - flagforge-net
+
+  flagsmith-postgres:
+    image: postgres:15.5-alpine
+    container_name: flagsmith-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: flagsmith
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${FLAGSMITH_POSTGRES_PASSWORD:?Run setup.ps1 to create local secrets}
+    volumes:
+      - flagsmith_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d flagsmith -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - flagforge-net
+
+  flagsmith-migrate-db:
+    image: ${FLAGSMITH_IMAGE:-docker.flagsmith.com/flagsmith/flagsmith:2.295.2@sha256:48905c664152d8ae2c843ec9cee72ff197e7caff6e91b959bb851a235915ea35}
+    container_name: flagsmith-migrate-db
+    command: ["migrate"]
+    environment: *flagsmith-env
+    depends_on:
+      flagsmith-postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - flagforge-net
+
+  flagsmith:
+    image: ${FLAGSMITH_IMAGE:-docker.flagsmith.com/flagsmith/flagsmith:2.295.2@sha256:48905c664152d8ae2c843ec9cee72ff197e7caff6e91b959bb851a235915ea35}
+    container_name: flagsmith-api
+    command: ["serve"]
+    restart: unless-stopped
+    environment: *flagsmith-env
+    ports:
+      - "${FLAGSMITH_PORT:-8081}:8000"
+    depends_on:
+      flagsmith-migrate-db:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/liveness/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+    networks:
+      - flagforge-net
+
+  flagsmith-task-processor:
+    image: ${FLAGSMITH_IMAGE:-docker.flagsmith.com/flagsmith/flagsmith:2.295.2@sha256:48905c664152d8ae2c843ec9cee72ff197e7caff6e91b959bb851a235915ea35}
+    container_name: flagsmith-task-processor
+    command: ["run-task-processor"]
+    restart: unless-stopped
+    environment: *flagsmith-env
+    depends_on:
+      flagsmith-migrate-db:
+        condition: service_completed_successfully
+      flagsmith:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/liveness/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
     networks:
       - flagforge-net
 
 volumes:
-  postgres_data:
-  redis_data:
+  flagforge_postgres_data:
+  flagforge_redis_data:
+  flagsmith_postgres_data:
 
 networks:
   flagforge-net:
+    name: flagforge-net
     driver: bridge

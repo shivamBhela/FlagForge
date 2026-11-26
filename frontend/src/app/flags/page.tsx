@@ -238,7 +238,7 @@ export default function FeatureFlagsPage() {
       ) : (
         <div className="space-y-4">
           {flags.map((flag) => {
-            const projName = flag.project?.name || "Unknown Project";
+            const projName = flag.project?.name || flag.project_name || "Unknown Project";
             return (
               <div
                 key={flag.id}
@@ -294,8 +294,8 @@ export default function FeatureFlagsPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {flag.states && flag.states.length > 0 ? (
                       flag.states.map((st: any) => {
-                        const env = st.environment;
-                        const isProd = env?.is_production;
+                        const envName = st.environment?.name || st.environment_name;
+                        const isProd = st.environment?.is_production ?? st.is_production;
                         return (
                           <div
                             key={st.id}
@@ -312,7 +312,7 @@ export default function FeatureFlagsPage() {
                                     <Lock className="w-3 h-3 text-amber-400" />
                                   </span>
                                 )}
-                                <span>{env?.name || "Environment"}</span>
+                                <span>{envName || "Environment"}</span>
                               </span>
                               <span
                                 className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border flex items-center gap-1 ${
