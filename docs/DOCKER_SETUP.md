@@ -4,7 +4,7 @@
 
 - Docker Desktop with Linux containers and Docker Compose v2.
 - Windows x64 and PowerShell 7 for `setup.ps1`.
-- At least 4 GB memory allocated to Docker.
+- At least 4 GB memory allocated to Docker for the Dashboard profile. On an 8 GB PC with a smaller Docker VM limit, use Core first; the prior full-stack run approached 3.58 GB.
 - Available localhost ports: 3000, 8000, 8080, 8081, 13133, 4317, 4318, 8889, 5433 and 6380.
 
 Setup reads configured host ports from `.env`, detects collisions on those ports, and leaves existing listeners alone. FlagForge Redis maps to host port 6380 because other local projects often bind 6379. The setup defaults are 3000, 8000, 8080, 8081, 5433 and 6380; Collector ports are fixed at 13133, 4317, 4318 and 8889.
@@ -14,8 +14,19 @@ The Compose project name defaults to `flagforge`. Compose scopes generated conta
 ## Start
 
 ```powershell
-.\setup.ps1
+.\setup.ps1 -Profile Dashboard
 ```
+
+Available profiles:
+
+| Command | Services added to the core |
+| --- | --- |
+| `./setup.ps1 -Profile Core` | API, worker, PostgreSQL, Redis and self-hosted Flagsmith only |
+| `./setup.ps1 -Profile Dashboard` | Core plus Next.js frontend |
+| `./setup.ps1 -Profile Observability` | Core plus OpenTelemetry Collector and demo app |
+| `./setup.ps1 -Profile Full` | Core plus frontend, Collector and demo app |
+
+Compose services in optional profiles remain available; omitting a profile does not remove their images, containers, or data. `setup.ps1` defaults to Core. From a running Core stack, add the dashboard with `docker compose --profile dashboard up --build -d web`, or add telemetry with `docker compose --profile observability up --build -d otel-collector demo-app`.
 
 The script creates `.env` only when it is absent, generates local secrets without printing them, validates Compose quietly, runs `docker compose up --build -d`, then waits on health checks. An existing `.env` is not overwritten.
 
@@ -23,9 +34,9 @@ Manual operations:
 
 ```powershell
 docker compose config --quiet
-docker compose up --build -d
+docker compose --profile dashboard up --build -d
 docker compose ps --all
-\.\scripts\health-check.ps1
+.\scripts\health-check.ps1 -Profile Dashboard
 ```
 
 ## Service and port inventory

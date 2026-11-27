@@ -2,13 +2,13 @@
 
 **Assessment date:** 2026-11-28
 **Repository:** `shivamBhela/FlagForge` (local branch `completion/final-readiness`)
-**Assessment:** Local prototype with verified backend/frontend work from the prior full pass. The latest browser rerun failed during account registration while Docker Desktop was resource constrained. This project is not production-ready.
+**Assessment:** Local prototype. The current Compose stack and migrations are healthy, and the latest headed Chromium workflow passes against the Compose frontend/API/PostgreSQL stack. A fresh local Flagsmith sign-in attempt using the supplied account was rejected, so live provider auth was not reverified in this pass; earlier isolated Staging sync and webhook evidence remains valid. There is no public deployment. This project is not production-ready.
 
 Statuses mean: **PASS** directly tested; **PARTIAL** functionality or evidence is incomplete; **BLOCKED** a concrete dependency prevents verification; **NOT IMPLEMENTED** missing; **NOT VERIFIED** insufficient evidence.
 
 ## 1. Executive summary
 
-FlagForge has working dashboard/backend capabilities and a newly added Python companion CLI that delegates supported Flagsmith operations to the official CLI. Backend, frontend lint/type/build, CLI unit tests, and an earlier headed browser run passed. A later headed browser rerun found that registration hangs. Docker Desktop showed the Flagsmith container restart stuck at 0%, the VM near its 3.58 GB memory limit, and the registration request pending; Docker CLI commands also stopped responding. A supported Docker Desktop restart failed with `Wsl/Service/CreateInstance/HCS_E_CONNECTION_TIMEOUT`. Terminating only Docker's `docker-desktop` WSL distro succeeded, but the app still cannot start its engine; the Ubuntu WSL distro was not touched. Therefore the latest complete end-to-end run is **BLOCKED/FAILED**, and Docker health is not currently confirmed. The report does not claim full completion or production readiness.
+FlagForge has working dashboard/backend capabilities and a Python companion CLI that delegates supported Flagsmith operations to the official CLI. On 2026-11-28, the backend suite passed (35 tests), the CLI suite passed (6 tests), frontend lint/type passed, and headed Chromium passed the E2E workflow against the running Compose frontend and PostgreSQL-backed API (1 test, 14.8 seconds). The workflow covered invalid-form validation, registration/login, organization/project/environment creation, reload persistence, the 18-route sweep, synthetic Staging Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, mobile layout and logout/login. No browser page errors, HTTP 5xx, or unexpected failed network requests were observed (navigation cancellations are recorded separately). All ten long-running Compose services reported healthy, both migration jobs exited successfully, and Alembic is at `009_encrypt_webhook_secrets (head)`. Named volumes were preserved. A fresh login attempt to the local Flagsmith UI using the supplied account was rejected; no repeated attempts were made. Earlier isolated Staging synchronization and signed webhook evidence remains documented, but the latest provider session could not be authenticated. There is no deployment provider connected and no public URL. The project is not production-ready.
 
 ## 2. What was already present
 
@@ -22,8 +22,10 @@ FlagForge has working dashboard/backend capabilities and a newly added Python co
 - **PASS:** Fixed the previously reported 34 frontend ESLint findings without disabling rules.
 - **PASS:** Changed Critical risk output to require manual approval when rollback is unavailable; `rollback_available` is false. Added regression coverage for sufficient telemetry with unavailable rollback.
 - **PASS:** Added a worker recovery script covering queued-job recovery, graceful termination, heartbeat removal, and restart health.
-- **PARTIAL:** Reduced the default Flagsmith web worker count to one for constrained local Docker hosts, with `FLAGSMITH_GUNICORN_WORKERS` as an override. This Compose change has not been applied successfully to a fresh running container because the current Docker engine is unresponsive.
+- **PASS:** Reduced the default Flagsmith web worker count to one for constrained local Docker hosts, with `FLAGSMITH_GUNICORN_WORKERS` as an override; the running service reports one Gunicorn worker and is healthy.
 - **PASS:** Added a companion CLI package and documentation, preserving the existing dashboard/backend.
+- **PASS:** Added `dashboard` and `observability` Compose profiles and a Core-default setup/health-check path for lower-memory local use. Static service matrix and PowerShell syntax validate; the current Full profile health check also passed.
+- **PASS:** Fixed the production-settings test fixture to isolate and provide its required test-only OTLP token; production requirements were not relaxed.
 
 ## 4. What was newly implemented
 
@@ -71,27 +73,28 @@ FlagForge has working dashboard/backend capabilities and a newly added Python co
 
 - **PASS:** Dashboard cleanup suggestions/preview were inspected in the earlier browser run; no destructive cleanup was triggered.
 - **PARTIAL:** CLI `cleanup preview` is now the documented command and is preview-only; it currently returns no candidates without sufficient provider comparison.
-- **BLOCKED:** No live GitHub PR/branch was created. Current `git ls-remote origin` returns no refs; the repository metadata names `main` as the default branch. `origin` is now configured to `https://github.com/shivamBhela/FlagForge.git`. Git Credential Manager 2.6.1 is installed and lists GitHub accounts, but a noninteractive push dry run failed with “could not read Username”; GitHub CLI is not installed. No branch was pushed and no merge was attempted. User must complete Git Credential Manager browser sign-in before retrying.
+- **PASS (repository publication):** `completion/final-readiness` is published at `72ebc9912f8cceda204e2cfb599a793b5ad6dbc4`; remote `HEAD` is `main` at `82908f3b92c689f06c5a155cce8657f378822f23`. Draft PR [#1](https://github.com/shivamBhela/FlagForge/pull/1) is open against `main`, unmerged. The application's own cleanup-to-PR workflow remains unverified and the companion CLI does not create PRs.
 - **NOT IMPLEMENTED:** CLI `github pr` deliberately does not create a branch or PR; it directs users to the dashboard workflow.
 
 ## 12. Flagsmith integration verification
 
 - **PASS:** Read-only official CLI evaluate against local Flagsmith returned a response without exposing the environment key.
 - **PASS (prior verified run):** A real Staging test flag was discovered/synchronized and a subsequent provider-side change detected; repeat sync was idempotent. Development/Production were not changed. A signed Staging test webhook was processed and the flag restored disabled afterward; the temporary webhook/test secret were removed.
-- **PARTIAL:** Current registration/browser rerun is blocked by the unresponsive Flagsmith service. Provider retry/outage handling remains unverified.
-- **NOT VERIFIED:** A new live discovery/sync/change-detection round trip in the current completion pass.
+- **PARTIAL:** Prior Staging-only discovery/sync/webhook evidence remains the latest live Flagsmith verification. Current headed FlagForge E2E used the Compose/PostgreSQL stack and an unconfigured integration state; it did not call a provider. A single local Flagsmith login attempt with the supplied account was rejected, so no new live sync was attempted. Provider retry/outage handling remains unverified.
+- **NOT VERIFIED:** A new live discovery/sync/change-detection round trip in the current completion pass; the account supplied did not authenticate to the local Flagsmith UI.
 
 ## 13. Dashboard and backend status
 
-- **PASS (prior verified run):** Backend suite recorded 35 passed. Frontend routes and real workflows passed one headed Chromium run with no uncaught page errors or HTTP 5xx during that run.
-- **FAIL (latest rerun):** Account registration stayed on `/register` with “Creating account…” and its POST to `localhost:8000/api/v1/auth/register` remained pending until timeout. Invalid input had returned validation promptly in an earlier diagnostic. This issue was not resolved or retested successfully.
-- **BLOCKED:** Local browser URL currently cannot be treated as healthy while the stack/Flagsmith restart is wedged. Do not rely on the earlier PASS as a substitute for the failed latest run.
+- **PASS (current Compose browser run):** Headed Chromium passed the E2E workflow against the Compose frontend and PostgreSQL-backed API in 14.8 seconds. Invalid form validation, registration/login, org/project/environment mutations, session reload, all 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian advisory output, incident empty states, cleanup draft preview, integration form validation and 390px layout passed. The test asserts no uncaught page errors, HTTP 5xx or unexpected failed requests (navigation cancellations are recorded). Screenshots are in ignored `frontend/test-results/`.
+- **PASS:** The earlier registration hang was retested against the actual Compose stack and did not recur.
 
 ## 14. Docker and deployment status
 
 - **PASS (prior verified run):** Compose configuration and migrations were previously verified; FlagForge Alembic head was `009_encrypt_webhook_secrets`, and Flagsmith migration containers exited successfully. Existing named volumes were preserved.
-- **BLOCKED (current):** Docker Desktop showed engine memory at 3.50 GB of 3.58 GB and the Flagsmith web container restart stuck at 0%. Its visible logs included Gunicorn worker timeouts and a SIGKILL “Perhaps out of memory?” message. `docker compose ps`, `docker info`, and a targeted Compose recreate did not return within their command timeouts. A supported Docker Desktop restart failed with `Wsl/Service/CreateInstance/HCS_E_CONNECTION_TIMEOUT`; terminating only the Docker-managed `docker-desktop` WSL distro returned successfully, but Docker still reports the engine unable to start. Current health of all services is unknown; named volumes and the user's Ubuntu WSL distro were not touched. A Windows restart or elevated WSL service recovery may be required and is pending user approval.
-- **PARTIAL:** Compose now defaults Flagsmith Gunicorn workers to one on constrained hosts. A successful recreate with that value remains pending.
+- **PASS (current):** Docker Desktop Linux engine is running. Ten long-running services report healthy; `migrate` and `flagsmith-migrate-db` exited 0. Alembic current is `009_encrypt_webhook_secrets (head)`. `scripts/health-check.ps1 -Profile Full` passed all service and HTTP checks. Existing named volumes were preserved.
+- **PASS:** Compose defaults Flagsmith Gunicorn to one worker; the currently running Flagsmith service uses one worker and is healthy.
+- **PASS (static configuration):** Default/Core, Dashboard, Observability and Full Compose service selection validate; Core omits the web, Collector and demo-app services. Full profile runtime health is confirmed above.
+- **BLOCKED:** Public hosting is not deployed. No deployment provider CLI, connected provider tool, or provider credential was available. No public ingress was opened and no charges were incurred.
 - **NOT VERIFIED:** Clean deployment after the latest configuration change, public ingress/TLS, restore-from-backup, HA, and production load.
 
 ## 15. Security and privacy status
@@ -99,14 +102,14 @@ FlagForge has working dashboard/backend capabilities and a newly added Python co
 - **PASS (automated checks):** Earlier auth/RBAC/tenant, SSRF, cryptography, webhook, and config tests passed; npm audit reported zero known vulnerabilities.
 - **PASS:** CLI archive scanning enforces GitHub host/redirect validation, bounded downloads/extraction, path traversal checks, and does not execute repository content. Credentials are sourced from the process environment/official CLI config and are not printed by the report.
 - **PARTIAL:** Rate limiting, TLS/ingress, key rotation operations, backup restoration, HA, production hardening, and independent security review are incomplete or unverified.
+- **PARTIAL:** Flagsmith startup logs emit an upstream Django-Axes warning that lockout parameters omit `ip_address`; this Compose configuration was not changed pending a supported upstream setting. The local stack is not publicly exposed.
 - **PASS:** No production Flagsmith flags were intentionally changed; the prior live webhook/synchronization checks were isolated to Staging and test flags.
 
 ## 16. Test results and commands executed
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Backend pytest | PASS (prior) | `docker compose run --rm --no-deps --build api python -m pytest tests/ -v`: 35 passed, one upstream deprecation warning. |
-| Host pytest rerun | BLOCKED | `python -m pytest tests -q` could not import `redis`; this host Python environment lacks backend dependencies. The containerized suite is the prior successful evidence and must be rerun after Docker recovers. |
+| Backend pytest | PASS (current) | `backend\.venv\Scripts\python.exe -m pytest -q`: 35 passed, one Starlette/httpx deprecation warning. The isolated local venv was installed from declared requirements. |
 | Worker recovery | PASS (prior) | `scripts/test-worker-recovery.ps1`: queued `PENDING`, recovered `COMPLETED`, attempt count 1, graceful stop/heartbeat removal/restart health verified. |
 | Frontend ESLint | PASS (prior) | `npm run lint`: zero project findings. |
 | Frontend TypeScript | PASS (prior) | `npx tsc --noEmit`. |
@@ -118,22 +121,22 @@ FlagForge has working dashboard/backend capabilities and a newly added Python co
 | Next production build | PASS (fresh) | `npm run build`: all 20 routes generated. |
 | CLI help | PASS (prior) | `python cli/flagforge_cli.py --help`. |
 | Official Flagsmith CLI | PASS | `npx --yes @flagsmith/cli@2.0.0 --help`; live local `evaluate` returned a response. |
-| Browser E2E | FAIL (latest) | Headed Playwright registration POST remained pending; screenshot/trace in ignored `frontend/test-results/`. Earlier run passed but is not the latest result. |
-| Docker/migrations | BLOCKED (current) | Docker CLI timed out; service state could not be re-read. Prior migration and health evidence is retained above. |
-| GitHub live PR | BLOCKED | Empty remote; `origin` configured; local Git lacks a usable credential; no remote branch or PR URL. |
+| Browser E2E | PASS (current Compose run) | `npm run test:e2e -- --headed`: 1 passed in 14.8s against Compose web/API/PostgreSQL, including invalid form validation, integration-form validation and unexpected-failed-request checks. Screenshots in ignored `frontend/test-results/`. |
+| Compose profile selection | PASS (static) | `docker compose config --quiet` plus service-list checks for default/Core, Dashboard, Observability and Full. Engine was not needed for config validation. |
+| Docker/migrations | PASS (current runtime) | Ten long-running services healthy; both one-shot migrations exited 0; Alembic `009_encrypt_webhook_secrets (head)`; Full profile HTTP checks passed. |
+| GitHub publication | PASS | Remote branch SHA matches local. PR #1 is an open draft against `main`; no merge. |
 
 ## 17. Known issues and limitations
 
-1. Latest browser registration hangs while the local Flagsmith/API stack is unhealthy or unresponsive.
-2. Docker Desktop currently cannot start its WSL engine (`HCS_E_CONNECTION_TIMEOUT`); a Windows restart or elevated WSL service recovery may be needed.
-3. CLI environment diff, authenticated telemetry queries, provider mutation workflow, and GitHub PR creation are missing or partial.
+1. Fresh local Flagsmith sign-in was rejected for the supplied account; provider discovery/sync/webhook must be rerun after credentials/account are confirmed.
+2. Public hosting is blocked on provider/account authorization; no public URL exists.
+3. CLI environment diff, authenticated telemetry queries, provider mutation workflow, and CLI GitHub PR creation are missing or partial.
 4. Scanner coverage is pattern-limited and no recall benchmark exists.
 5. Remote rollback, live Chaos experiments, provider retries/outage scenarios, rate limiting, TLS/ingress, and disaster recovery remain incomplete/unverified.
-6. No real GitHub PR was made; do not cite a PR or live repository write as evidence.
 
 ## 18. Competition demonstration instructions
 
-Once the local stack is healthy, use an isolated QA organization/project and Staging environment only. Demonstrate: login; create/select a QA project; connect the local Flagsmith instance; inspect a test flag; run sync and show idempotency; scan the sample/local source; inspect source-backed dependency edges; run synthetic Staging Chaos; view monitoring/risk/incident/cleanup preview; reload and confirm persistence. State clearly that Chaos is synthetic and cleanup/rollback are previews. Do not use Production for mutation.
+Use an isolated QA organization/project and Staging environment only. Demonstrate: login; create/select a QA project; connect the local Flagsmith instance after confirming a valid local account; inspect a test flag; run sync and show idempotency; scan the sample/local source; inspect source-backed dependency edges; run synthetic Staging Chaos; view monitoring/risk/incident/cleanup preview; reload and confirm persistence. State clearly that Chaos is synthetic and cleanup/rollback are previews. Do not use Production for mutation.
 
 CLI smoke workflow:
 
@@ -150,15 +153,13 @@ flagforge report --format markdown
 
 ## 19. Production-readiness assessment
 
-**NOT READY.** The application is a locally demonstrable prototype with valuable verified functionality, but the latest registration flow fails, the current Docker runtime is unhealthy/unresponsive, key CLI workflows are incomplete, and deployment/security/operations evidence is missing. No production-readiness claim is supported.
+**NOT READY.** The application is a locally demonstrable prototype with a passing Docker-backed E2E workflow and healthy Compose services, but fresh Flagsmith authentication was rejected, several CLI workflows are incomplete, public hosting is absent, and security/operations evidence is missing. No production-readiness claim is supported.
 
 ## 20. Remaining blockers and recommended next actions
 
-1. After approval, restart Windows or recover the WSL service, then start Docker Desktop without deleting or pruning named volumes; apply the one-worker Flagsmith setting and verify all services/migrations.
-2. Re-run registration through headed Chromium; inspect browser network, API and Flagsmith logs; fix the root cause and repeat login/logout, persistence, and end-to-end workflows.
-3. Re-run the complete backend, frontend lint/type/build, CLI suite, Docker health/migration checks, and Playwright suite against the recovered stack.
-4. Implement or clearly defer the missing CLI workflows (`diff`, live monitor context, safe PR preparation) and add command-level tests.
-5. Establish a credentialed Git remote or a verified supported publish path; push the local branch and open the authorized PR without merging. Confirm the repository base branch before publishing.
-6. Complete rate limiting, TLS/ingress, backup/restore, load, HA, and independent security review before any production use.
+1. Confirm the local Flagsmith account credentials, then rerun isolated Staging discovery/sync/change detection and webhook verification.
+2. Connect an authorized deployment provider/account; confirm plan and any cost before provisioning, then deploy and verify the full architecture.
+3. Implement or clearly defer the missing CLI workflows (`diff`, authenticated monitor context, safe PR preparation) and add command-level tests.
+4. Complete rate limiting, TLS/ingress, backup/restore, load, HA, and independent security review before any production use.
 
 **Evidence preservation:** Previous Playwright screenshots/traces remain under ignored `frontend/test-results/`; no credentials or generated sensitive test data should be committed. Existing Docker volumes were not removed.

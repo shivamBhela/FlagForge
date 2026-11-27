@@ -5,7 +5,7 @@ This report separates live local verification from mocked, synthetic and unavail
 ## High
 
 - **Production deployment hardening is incomplete.** This Compose stack is local-development oriented. Public TLS/ingress, backup and restore drills, high availability, key rotation/expiry procedures and an independent security review have not been verified. Do not expose this stack publicly.
-- **GitHub PR creation is implemented but live use is unverified.** The connected public repository `shivamBhela/FlagForge` is empty (`size=0`, no refs). Local Git has no authenticated remote configured. App authentication, repository listing and PR lifecycle are covered by mocked tests only; no branch, commit or PR was created.
+- **FlagForge's application PR workflow is unverified.** The repository branch `completion/final-readiness` is published at `72ebc9912f8cceda204e2cfb599a793b5ad6dbc4`, and draft PR [#1](https://github.com/shivamBhela/FlagForge/pull/1) is open against `main`. This is repository publication evidence, not a live test of FlagForge's own cleanup-to-PR workflow, which remains mock-tested only.
 
 ## Medium
 
@@ -15,7 +15,9 @@ This report separates live local verification from mocked, synthetic and unavail
 - **Chaos Lab is synthetic.** It changes no provider state and sends no load. Its UI identifies the scenario as simulated and confines the scenario label to Staging.
 - **Installation testing is same-host only.** A fresh isolated checkout with separate Compose volumes passed the documented setup, migrations, health checks and browser workflow on this Windows/Docker Desktop host. A second physical machine was not available.
 - **Flagsmith retry semantics are not fully verified.** A real provider test event and real Staging flag changes were delivered and processed. Provider retry/backoff behavior under callback outage and duplicate provider retry delivery were not tested.
-- **Provider-specific rollback and external GitHub lifecycle are unverified.** No remote rollback is enabled; the repository has no base branch and local Git authentication is not configured.
+- **A fresh Flagsmith login could not be verified.** The supplied account was rejected by the local Flagsmith login page on one attempt. Earlier isolated Staging synchronization and webhook tests passed; confirm the account before repeating a live provider round trip.
+- **Public hosting is not configured or deployed.** There is no public URL; provider account access and any cost approval are prerequisites.
+- **Provider-specific rollback is unverified and disabled; FlagForge's own external GitHub cleanup/PR lifecycle is unverified.**
 
 ## Low
 
@@ -25,7 +27,7 @@ This report separates live local verification from mocked, synthetic and unavail
 
 ## Explicitly unverified
 
-- Actual branch/commit/PR creation and PR status refresh. The GitHub connector sees the account's push permission, but local Git cannot publish to the empty repository.
+- Live use of FlagForge's PR workflow, separate from the already verified repository publication and draft PR.
 - Provider conditional-write semantics for rollback under concurrent changes.
 - Flagsmith webhook delivery retries and outage recovery behavior.
 - Public TLS, backup restore, multi-node deployment, production load and independent penetration testing.
