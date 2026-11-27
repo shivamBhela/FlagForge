@@ -23,7 +23,8 @@
 | `npm run lint` | **Passed** | All 34 previously recorded findings were fixed; no rule suppression or configuration weakening. |
 | Latest headed Playwright run | **Passed (current Compose run)** | 1 test passed in 14.8 seconds against Compose web/API/PostgreSQL. Invalid-form validation, registration/login, org/project/environment CRUD, 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, 390px mobile width, logout/login and persistence passed. No page errors, HTTP 5xx or unexpected failed requests; navigation cancellations are separately recorded. |
 | Latest Docker status check | **Passed** | Ten long-running services healthy; both one-shot migrations exited 0; Alembic `009_encrypt_webhook_secrets (head)`; Full profile health and HTTP checks passed. |
-| Companion CLI unit tests | **Passed** | `python -m unittest discover -s cli/tests -v`: 6 passed. |
+| Docker memory snapshot | **Passed (point-in-time)** | `docker stats --no-stream` measured approximately 1.15 GiB across ten running services against the 3.67 GiB Docker VM limit; this was not a peak/load/soak measurement. |
+| Companion CLI unit tests | **Passed (current)** | `python -m unittest discover -s cli/tests -v`: 8 passed, including GitHub ZIP endpoint and JavaScript comment exclusion. |
 | Latest frontend lint/type/build | **Passed** | `npm run lint`, `npx tsc --noEmit`, and `npm run build` exited 0; build generated 20 routes. |
 
 ## Browser workflow
@@ -48,7 +49,7 @@ The fresh isolated checkout at `C:\Users\unbel\Downloads\FlagForge_CleanInstall_
 
 - **Flagsmith real local API:** official 2.295.2 instance, pinned by digest. Existing evidence covers project/environment/flag discovery and synchronization, including Staging-only state change detection; Development and Production remained unchanged.
 - **Flagsmith live webhook:** provider-signed test callback plus two actual Staging flag updates (enable and restore) were delivered to the private Compose alias, processed, and reconciled. Database evidence shows processed webhook events and completed webhook-triggered sync history. The test flag read back disabled; the temporary provider webhook was removed and the local webhook signing secret cleared. Provider retry behavior and outage recovery were not tested.
-- **GitHub:** the feature branch is published at `72ebc9912f8cceda204e2cfb599a793b5ad6dbc4`. Draft PR [#1](https://github.com/shivamBhela/FlagForge/pull/1) is open against `main`, unmerged. FlagForge's own cleanup-to-PR workflow remains mocked/unverified.
+- **GitHub:** the feature branch is published and draft PR [#1](https://github.com/shivamBhela/FlagForge/pull/1) is open against `main`, unmerged. FlagForge's own cleanup-to-PR workflow remains mocked/unverified.
 - **Redis worker:** durable Flagsmith sync/repository scan processing and restart recovery were verified previously. `scripts/test-worker-recovery.ps1` additionally verified queued-job completion after restart, graceful SIGTERM, heartbeat removal and healthy restart; no new job types were introduced.
 - **OpenTelemetry:** prior end-to-end QA sent demo-app OTLP traffic through the Collector into authenticated, tenant-attributed storage and verified Monitor/Risk outputs. Demo telemetry is not customer traffic.
 - **Chaos Lab:** synthetic demonstration only; no load and no provider mutation.

@@ -10,14 +10,14 @@ Install and start Docker Desktop with the Linux engine, then run:
 .\setup.ps1
 ```
 
-Setup defaults to the lower-memory Core stack. To add the frontend, run `docker compose --profile dashboard up --build -d web`; to add the Collector and demo app, run `docker compose --profile observability up --build -d otel-collector demo-app`. `-Profile Dashboard`, `-Profile Observability`, and `-Profile Full` select those combinations on a fresh start.
+Setup defaults to the lower-memory Core stack. To open FlagForge, either choose `-Profile Dashboard` on a fresh start or add the frontend with `docker compose --profile dashboard up --build -d web`; to add the Collector and demo app, run `docker compose --profile observability up --build -d otel-collector demo-app`. `-Profile Dashboard`, `-Profile Observability`, and `-Profile Full` select those combinations on a fresh start.
 
-The setup script creates a local-only `.env` with generated secrets when one is absent, validates Compose, builds and starts the stack, then checks service health. It does not overwrite an existing `.env` or remove volumes. Open:
+The setup script creates a local-only `.env` with generated secrets when one is absent, validates Compose, builds and starts the stack, then checks service health. It does not overwrite an existing `.env` or remove volumes. Once the relevant profile is running, open:
 
 - FlagForge: <http://localhost:3000>
 - Official Flagsmith: <http://localhost:8081>
 - FlagForge API docs: <http://localhost:8000/api/v1/docs>
-- Demo app: <http://localhost:8080>
+- Demo app (Observability profile): <http://localhost:8080>
 
 To stop the stack without deleting persisted data:
 

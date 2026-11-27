@@ -8,7 +8,11 @@ Statuses mean: **PASS** directly tested; **PARTIAL** functionality or evidence i
 
 ## 1. Executive summary
 
-FlagForge has working dashboard/backend capabilities and a Python companion CLI that delegates supported Flagsmith operations to the official CLI. On 2026-11-28, the backend suite passed (35 tests), the CLI suite passed (6 tests), frontend lint/type passed, and headed Chromium passed the E2E workflow against the running Compose frontend and PostgreSQL-backed API (1 test, 14.8 seconds). The workflow covered invalid-form validation, registration/login, organization/project/environment creation, reload persistence, the 18-route sweep, synthetic Staging Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, mobile layout and logout/login. No browser page errors, HTTP 5xx, or unexpected failed network requests were observed (navigation cancellations are recorded separately). All ten long-running Compose services reported healthy, both migration jobs exited successfully, and Alembic is at `009_encrypt_webhook_secrets (head)`. Named volumes were preserved. A fresh login attempt to the local Flagsmith UI using the supplied account was rejected; no repeated attempts were made. Earlier isolated Staging synchronization and signed webhook evidence remains documented, but the latest provider session could not be authenticated. There is no deployment provider connected and no public URL. The project is not production-ready.
+FlagForge has working dashboard/backend capabilities and a Python companion CLI that delegates supported Flagsmith operations to the official CLI. On 2026-11-28, the backend suite passed (35 tests), the CLI suite passed (8 tests), frontend lint/type passed, and headed Chromium passed the E2E workflow against the running Compose frontend and PostgreSQL-backed API (1 test, 14.8 seconds). The workflow covered invalid-form validation, registration/login, organization/project/environment creation, reload persistence, the 18-route sweep, synthetic Staging Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, mobile layout and logout/login. No browser page errors, HTTP 5xx, or unexpected failed network requests were observed (navigation cancellations are recorded separately). All ten long-running Compose services reported healthy, both migration jobs exited successfully, and Alembic is at `009_encrypt_webhook_secrets (head)`. Named volumes were preserved. A fresh login attempt to the local Flagsmith UI using the supplied account was rejected; no repeated attempts were made. Earlier isolated Staging synchronization and signed webhook evidence remains documented, but the latest provider session could not be authenticated. There is no deployment provider connected and no public URL. The project is not production-ready.
+
+## Completion estimate
+
+**70.8% against the 24-item acceptance checklist.** Method: each item is equally weighted; PASS = 1 point, PARTIAL = 0.5, and BLOCKED or NOT IMPLEMENTED = 0. Current count: 15 PASS, 4 PARTIAL, 1 NOT IMPLEMENTED, 4 BLOCKED (17/24 points). This measures checklist delivery only; it is not a production-readiness score.
 
 ## 2. What was already present
 
@@ -30,7 +34,9 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 ## 4. What was newly implemented
 
 - **PARTIAL:** `cli/flagforge_cli.py` adds local source scanning, GitHub archive scanning, evidence-only dependency output, provider flag listing/inspection/audit delegation, doctor/init commands, and report output.
-- **PASS:** Six CLI unit tests cover Python AST references, JS/TS patterns, dynamic references, ignored files, archive traversal rejection, GitHub host validation, and explicit cleanup-preview syntax.
+- **PASS:** Eight CLI unit tests cover Python AST references, comment-stripped JS/TS patterns, dynamic references, ignored files, archive traversal rejection, GitHub ZIP endpoint/host validation, and explicit cleanup-preview syntax.
+- **PASS:** Fixed GitHub scanning to request a ZIP archive rather than a TAR archive and verified a public official Flagsmith JavaScript client scan (49 files, 13 literal/dynamic references); source code was not executed.
+- **PASS:** Added a small source-only Python/TypeScript sample and scanned it locally (2 files, 2 literal references with line evidence and 1 unknown dynamic reference).
 - **PARTIAL:** Named environment diff, authenticated telemetry display, automated cleanup patching, provider mutations, and CLI GitHub PR creation are not implemented in this companion CLI. The CLI states those limits rather than pretending to perform the operations.
 
 ## 5. Official Flagsmith CLI integration approach and evidence
@@ -41,15 +47,17 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 
 ## 6. Local scanning functionality and supported coverage
 
-- **PARTIAL:** `flagforge scan [PATH]` reads Python, JavaScript, JSX, MJS, CJS, TypeScript, and TSX. Python uses AST for recognized literal calls, with lexical fallback for invalid syntax. JS/TS uses listed regex patterns. Dynamic references are reported without an invented key. Common generated/dependency directories, symlinks, `.env` files, and oversized files are excluded; aggregate input is capped.
-- **PARTIAL:** This is pattern-based source discovery, not full language semantic analysis. Other languages, aliases/wrappers, multiline or uncommon SDK forms, and inferred runtime dependencies may be missed. A scan of `backend/app` found 59 files and no recognized call patterns; that says nothing about other languages or SDK forms.
+- **PASS (sample workflow):** `flagforge scan examples/flagforge-feature-flag-sample` scanned 2 Python/TypeScript files and returned `checkout_v2_redesign` and `instant_refunds` with file/line evidence plus one dynamic reference without a guessed key.
+- **PARTIAL:** Python uses AST for recognized literal calls, with lexical fallback for invalid syntax. JS/TS strips comments then applies line-based patterns at medium confidence. Common generated/dependency directories, symlinks, `.env` files, and oversized files are excluded; aggregate input is capped.
+- **PARTIAL:** This is pattern-based source discovery, not full language semantic analysis. Other languages, aliases/wrappers, multiline or uncommon SDK forms, and inferred runtime dependencies may be missed. An empty scan for a repository without direct SDK calls is valid and does not establish absence of indirect flags.
 - **NOT VERIFIED:** Broad accuracy/recall against a representative corpus.
 
 ## 7. GitHub repository scanning functionality and authentication requirements
 
-- **PARTIAL:** `flagforge scan-repo https://github.com/OWNER/REPOSITORY` downloads a size-limited GitHub archive, validates redirects/paths, extracts into a temporary directory, excludes secrets/generated files, and never executes repository code. `GITHUB_TOKEN` may be provided through the process environment for private repository access.
+- **PASS (public repo):** `flagforge scan-repo https://github.com/Flagsmith/flagsmith-js-client.git` downloaded the public GitHub ZIP archive and scanned 49 supported source files; 13 candidate references (including dynamic references) were reported with file and line evidence. A regression test verifies the archive endpoint and safe extraction.
+- **PARTIAL:** The scanner validates redirects/paths, extracts into a temporary directory, excludes secrets/generated files, and never executes repository code. `GITHUB_TOKEN` may be supplied through process environment for private repository access.
 - **NOT VERIFIED:** A real private repository scan and authorization boundary. No GitHub token or private repository content was tested.
-- **NOT VERIFIED:** Live scan of the project repository archive as part of this completion pass.
+- **NOT VERIFIED:** A private repository scan and its authorization boundary. No private repository token/content was tested.
 
 ## 8. Feature-flag detection accuracy and limitations
 
@@ -60,7 +68,7 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 ## 9. Dependency graph and environment comparison
 
 - **PARTIAL:** CLI `dependencies` emits file-to-flag edges backed by source evidence and does not infer runtime edges.
-- **PASS:** Existing dashboard dependency graph was exercised in the earlier headed run.
+- **PASS:** CLI dependency graph emitted two source-backed edges for the local sample; the dashboard graph refresh was exercised in the latest headed browser run.
 - **NOT IMPLEMENTED:** Companion CLI `diff dev staging` currently returns an explicit unsupported error. Dashboard environment views exist, but current end-to-end parity for the named CLI workflow was not verified.
 
 ## 10. Risk engine and Release Guardian
@@ -73,7 +81,7 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 
 - **PASS:** Dashboard cleanup suggestions/preview were inspected in the earlier browser run; no destructive cleanup was triggered.
 - **PARTIAL:** CLI `cleanup preview` is now the documented command and is preview-only; it currently returns no candidates without sufficient provider comparison.
-- **PASS (repository publication):** `completion/final-readiness` is published at `72ebc9912f8cceda204e2cfb599a793b5ad6dbc4`; remote `HEAD` is `main` at `82908f3b92c689f06c5a155cce8657f378822f23`. Draft PR [#1](https://github.com/shivamBhela/FlagForge/pull/1) is open against `main`, unmerged. The application's own cleanup-to-PR workflow remains unverified and the companion CLI does not create PRs.
+- **PASS (repository publication):** `completion/final-readiness` is published to the verified remote, and draft PR [#1](https://github.com/shivamBhela/FlagForge/pull/1) is open against `main`, unmerged. The application's own cleanup-to-PR workflow remains unverified and the companion CLI does not create PRs.
 - **NOT IMPLEMENTED:** CLI `github pr` deliberately does not create a branch or PR; it directs users to the dashboard workflow.
 
 ## 12. Flagsmith integration verification
@@ -91,7 +99,7 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 ## 14. Docker and deployment status
 
 - **PASS (prior verified run):** Compose configuration and migrations were previously verified; FlagForge Alembic head was `009_encrypt_webhook_secrets`, and Flagsmith migration containers exited successfully. Existing named volumes were preserved.
-- **PASS (current):** Docker Desktop Linux engine is running. Ten long-running services report healthy; `migrate` and `flagsmith-migrate-db` exited 0. Alembic current is `009_encrypt_webhook_secrets (head)`. `scripts/health-check.ps1 -Profile Full` passed all service and HTTP checks. Existing named volumes were preserved.
+- **PASS (current):** Docker Desktop Linux engine is running. Ten long-running services report healthy; `migrate` and `flagsmith-migrate-db` exited 0. Alembic current is `009_encrypt_webhook_secrets (head)`. `scripts/health-check.ps1 -Profile Full` passed all service and HTTP checks. `docker stats` measured about 1.15 GiB total across the ten running services against the 3.67 GiB Docker VM limit (point-in-time, not a load/soak measurement). Existing named volumes were preserved.
 - **PASS:** Compose defaults Flagsmith Gunicorn to one worker; the currently running Flagsmith service uses one worker and is healthy.
 - **PASS (static configuration):** Default/Core, Dashboard, Observability and Full Compose service selection validate; Core omits the web, Collector and demo-app services. Full profile runtime health is confirmed above.
 - **BLOCKED:** Public hosting is not deployed. No deployment provider CLI, connected provider tool, or provider credential was available. No public ingress was opened and no charges were incurred.
@@ -115,7 +123,9 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 | Frontend TypeScript | PASS (prior) | `npx tsc --noEmit`. |
 | Next production build | PASS (prior) | `npm run build`: 20 routes generated. |
 | npm audit | PASS (prior) | Both full and production-only audit reported zero known vulnerabilities. |
-| CLI unit tests | PASS (fresh) | `python -m unittest discover -s cli/tests -v`: 6 passed. |
+| CLI unit tests | PASS (fresh) | `python -m unittest discover -s cli/tests -v`: 8 passed. |
+| Local CLI scan | PASS (fresh) | `python cli/flagforge_cli.py scan examples/flagforge-feature-flag-sample`: 2 files; 2 literal refs with line evidence; 1 dynamic ref without a guessed key. |
+| Public GitHub scan | PASS (live read-only) | `python cli/flagforge_cli.py scan-repo https://github.com/Flagsmith/flagsmith-js-client.git`: 49 files scanned; 13 candidate references reported. Private repo auth not tested. |
 | Frontend ESLint | PASS (fresh) | `npm run lint`: exit code 0. |
 | Frontend TypeScript | PASS (fresh) | `npx tsc --noEmit`: exit code 0. |
 | Next production build | PASS (fresh) | `npm run build`: all 20 routes generated. |

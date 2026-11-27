@@ -30,6 +30,17 @@ class ScannerTests(unittest.TestCase):
     def test_typescript_patterns_and_dynamic_reference(self):
         refs = cli.scan_lexical("src/flags.ts", 'flagsmith.hasFeature("new_checkout"); flagsmith.getValue(name);')
         self.assertEqual([ref["flag_key"] for ref in refs], ["new_checkout", None])
+        self.assertEqual(refs[0]["confidence"], "medium")
+
+    def test_javascript_comments_do_not_create_references(self):
+        source = '''
+// flagsmith.hasFeature("commented_line")
+/* flagsmith.getValue("commented_block") */
+const enabled = flagsmith.hasFeature("real_flag");
+'''
+        refs = cli.scan_lexical("src/flags.ts", source)
+        self.assertEqual([ref["flag_key"] for ref in refs], ["real_flag"])
+        self.assertEqual(refs[0]["line_number"], 4)
 
     def test_walk_ignores_generated_and_secrets(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -55,6 +66,26 @@ class ScannerTests(unittest.TestCase):
     def test_repo_url_rejects_non_github_hosts_before_network(self):
         with self.assertRaises(cli.CliError):
             cli.fetch_public_github_zip("https://example.com/owner/repo")
+
+    def test_github_archive_fetch_uses_zipball_endpoint(self):
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            archive.writestr("owner-repo-root/src/app.py", 'flagsmith.has_feature("checkout")')
+        payload = buffer.getvalue()
+
+        class FakeResponse(io.BytesIO):
+            headers = {"Content-Length": str(len(payload))}
+
+            def geturl(self):
+                return "https://codeload.github.com/owner/repo/legacy.zip/refs/heads/main"
+
+        with patch.object(cli.urllib.request, "urlopen", return_value=FakeResponse(payload)) as open_url:
+            self.assertEqual(cli.fetch_public_github_zip("https://github.com/owner/repo.git"), payload)
+
+        request = open_url.call_args.args[0]
+        self.assertEqual(request.full_url, "https://api.github.com/repos/owner/repo/zipball")
+        result = cli.scan_archive(payload)
+        self.assertEqual([ref["flag_key"] for ref in result["references"]], ["checkout"])
 
 
 if __name__ == "__main__":

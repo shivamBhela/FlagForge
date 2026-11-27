@@ -158,12 +158,64 @@ def scan_python(path: str, content: str) -> list[dict[str, Any]]:
     return results
 
 
+def strip_javascript_comments(content: str) -> str:
+    """Remove JS/TS comments while preserving quoted text and line numbers."""
+    output: list[str] = []
+    in_block = False
+    quote: str | None = None
+    escaped = False
+    index = 0
+    while index < len(content):
+        char = content[index]
+        following = content[index:index + 2]
+        if in_block:
+            if following == "*/":
+                output.append(" ")
+                in_block = False
+                index += 2
+            else:
+                if char == "\n":
+                    output.append("\n")
+                index += 1
+            continue
+        if quote:
+            output.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            index += 1
+            continue
+        if following == "/*":
+            output.append(" ")
+            in_block = True
+            index += 2
+            continue
+        if following == "//":
+            newline = content.find("\n", index)
+            if newline == -1:
+                break
+            output.append("\n")
+            index = newline + 1
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+        output.append(char)
+        index += 1
+    return "".join(output)
+
+
 def scan_lexical(path: str, content: str) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
-    for line_number, line in enumerate(content.splitlines(), 1):
+    code_without_comments = strip_javascript_comments(content)
+    original_lines = content.splitlines()
+    for line_number, line in enumerate(code_without_comments.splitlines(), 1):
+        evidence = original_lines[line_number - 1].strip() if line_number <= len(original_lines) else line.strip()
         values: list[tuple[str, str]] = []
-        values.extend((match.group(2), "high") for match in JS_STRING.finditer(line))
-        values.extend((match.group(2), "high") for match in JS_BRACKET.finditer(line))
+        values.extend((match.group(2), "medium") for match in JS_STRING.finditer(line))
+        values.extend((match.group(2), "medium") for match in JS_BRACKET.finditer(line))
         for match in USE_FLAGS.finditer(line):
             values.extend((item, "medium") for _, item in STRINGS.findall(match.group(1)))
         for match in JS_DYNAMIC.finditer(line):
@@ -171,7 +223,7 @@ def scan_lexical(path: str, content: str) -> list[dict[str, Any]]:
         for key, confidence in values:
             results.append({"flag_key": key or None, "file_path": path, "line_number": line_number,
                             "confidence": confidence,
-                            "evidence": line.strip() if key else "dynamic feature-flag reference"})
+                            "evidence": evidence if key else "dynamic feature-flag reference"})
     return results
 
 
@@ -223,7 +275,9 @@ def fetch_public_github_zip(repository_url: str) -> bytes:
     owner, repo = parts[0], parts[1].removesuffix(".git")
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", owner) or not re.fullmatch(r"[A-Za-z0-9_.-]+", repo):
         raise CliError("Repository URL contains an invalid owner or repository name.")
-    url = f"https://api.github.com/repos/{owner}/{repo}/tarball"
+    # The scanner validates and safely extracts ZIP files. GitHub's tarball
+    # endpoint returns gzip-compressed TAR data, so request the matching zipball.
+    url = f"https://api.github.com/repos/{owner}/{repo}/zipball"
     headers = {"Accept": "application/vnd.github+json", "User-Agent": f"FlagForge/{VERSION}"}
     token = os.environ.get("GITHUB_TOKEN")
     if token:

@@ -31,7 +31,7 @@ flagforge report [--path PATH] [--format json|markdown]
 flagforge github pr
 ```
 
-`flags list`, `flags inspect`, and provider reads are delegated to the official CLI. `scan` supports Python AST call patterns and regex-based JavaScript/TypeScript patterns. It excludes common generated/dependency directories, symlinks, `.env` files and large files. Dynamic references are surfaced without a guessed key. GitHub archive scanning accepts only `github.com` URLs, downloads a size-limited tarball to memory, extracts into a temporary directory with path traversal checks, and never executes repository code. An optional `GITHUB_TOKEN` is consumed only from the process environment for private repository access.
+`flags list`, `flags inspect`, and provider reads are delegated to the official CLI. `scan` uses Python AST call patterns and comment-stripped, line-based JavaScript/TypeScript patterns; JS/TS literal matches are medium confidence, and dynamic references are surfaced without a guessed key. The scanner excludes common generated/dependency directories, symlinks, `.env` files and large files. GitHub archive scanning accepts only `github.com` URLs, downloads a size-limited ZIP archive to memory, extracts regular files into a temporary directory with path traversal checks, and never executes repository code. An optional `GITHUB_TOKEN` is consumed only from the process environment for private repository access.
 
 Commands whose safe full behavior needs additional provider or authenticated application context are explicit about their limits: named environment diff is not implemented in this companion; `sync` is dry-run only; `risk` needs `FLAGFORGE_ACCESS_TOKEN` and `FLAGFORGE_ORGANIZATION_ID`; `cleanup preview` reports no candidates unless provider comparison proves them; and `github pr` does not create a branch or PR. These operations remain available in the dashboard where implemented and tested. No flag mutation or PR is performed by the CLI.
 
@@ -41,4 +41,4 @@ Commands whose safe full behavior needs additional provider or authenticated app
 python -m unittest discover -s cli/tests -v
 ```
 
-The CLI tests cover Python and JS/TS references, dynamic-reference labeling, ignored files, archive traversal safety, and host validation. They do not substitute for live Flagsmith or GitHub verification.
+The CLI tests cover Python and JS/TS references, dynamic-reference labeling, comment exclusion, ignored files, archive traversal safety, the GitHub ZIP endpoint and host validation. A public GitHub archive scan was verified separately; private-repository authorization and live Flagsmith management reads remain unverified in this pass.

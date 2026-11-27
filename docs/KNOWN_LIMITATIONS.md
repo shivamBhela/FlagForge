@@ -5,7 +5,7 @@ This report separates live local verification from mocked, synthetic and unavail
 ## High
 
 - **Production deployment hardening is incomplete.** This Compose stack is local-development oriented. Public TLS/ingress, backup and restore drills, high availability, key rotation/expiry procedures and an independent security review have not been verified. Do not expose this stack publicly.
-- **FlagForge's application PR workflow is unverified.** The repository branch `completion/final-readiness` is published at `72ebc9912f8cceda204e2cfb599a793b5ad6dbc4`, and draft PR [#1](https://github.com/shivamBhela/FlagForge/pull/1) is open against `main`. This is repository publication evidence, not a live test of FlagForge's own cleanup-to-PR workflow, which remains mock-tested only.
+- **FlagForge's application PR workflow is unverified.** The repository branch `completion/final-readiness` is published, and draft PR [#1](https://github.com/shivamBhela/FlagForge/pull/1) is open against `main`. This is repository publication evidence, not a live test of FlagForge's own cleanup-to-PR workflow, which remains mock-tested only.
 
 ## Medium
 
