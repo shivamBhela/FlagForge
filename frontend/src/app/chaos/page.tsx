@@ -38,7 +38,26 @@ export default function ChaosLabPage() {
   };
 
   useEffect(() => {
-    loadData();
+    if (!currentOrg) return;
+    let ignore = false;
+    const fetchData = async () => {
+      try {
+        const [scenarioList, runList] = await Promise.all([
+          api.chaos.listScenarios(currentOrg.id),
+          api.chaos.listRuns(currentOrg.id),
+        ]);
+        if (!ignore) {
+          setScenarios(scenarioList);
+          setRuns(runList);
+        }
+      } catch {
+        // Preserve the last successful results on transient load failures.
+      }
+    };
+    void fetchData();
+    return () => {
+      ignore = true;
+    };
   }, [currentOrg]);
 
   const handleRunScenario = async (scenarioId: string) => {

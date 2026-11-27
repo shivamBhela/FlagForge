@@ -18,18 +18,21 @@ export default function PoliciesPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [error, setError] = useState("");
 
-  const loadPolicy = async () => {
-    if (!currentOrg) return;
-    try {
-      const pol = await api.guardian.getPolicy(currentOrg.id);
-      setPolicy(pol);
-    } catch (e) {
-      // Ignore
-    }
-  };
-
   useEffect(() => {
-    loadPolicy();
+    if (!currentOrg) return;
+    let ignore = false;
+    const loadPolicy = async () => {
+      try {
+        const pol = await api.guardian.getPolicy(currentOrg.id);
+        if (!ignore) setPolicy(pol);
+      } catch {
+        // Preserve the current policy if a refresh fails.
+      }
+    };
+    void loadPolicy();
+    return () => {
+      ignore = true;
+    };
   }, [currentOrg]);
 
   const handleSave = async (e: React.FormEvent) => {

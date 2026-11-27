@@ -21,6 +21,8 @@ Create a dedicated demo organization/project and Development/Staging environment
 
 The Compose stack includes seven FlagForge services plus the official Flagsmith application, its separate PostgreSQL, migration job, and task processor. Flagsmith image `v2.295.2` is pinned by tag and verified OCI digest. Host Redis maps to port 6380 to avoid a common existing Redis port conflict; containers use service DNS.
 
+On a small Docker VM, the official Flagsmith API's default Gunicorn process count can exhaust memory. This Compose setup uses the documented `GUNICORN_WORKERS` setting through `FLAGSMITH_GUNICORN_WORKERS` (default `1`); increase it only when the host has capacity. If Flagsmith workers are killed or requests time out, check Docker Desktop's VM memory before raising the worker count.
+
 Check services with `./scripts/health-check.ps1`. Stop only this project while preserving its data with `./scripts/stop.ps1`. Restart with `docker compose up -d`. These scripts do not remove volumes or stop unrelated Compose projects.
 
 ## Tests
@@ -46,6 +48,19 @@ docker compose run --rm --no-deps --build api python -m pytest tests/ -v
 ```
 
 The worker runs Redis Streams jobs for Flagsmith sync and repository scans. Demo-app OTLP metrics flow through the Collector into the authenticated FlagForge telemetry store and Risk Engine. Chaos Lab remains a non-mutating simulation. A signed local Flagsmith webhook and Staging-only flag update/restore were live-verified. GitHub PR workflow is implemented and mock-tested, but live GitHub verification requires credentials. Remote rollback remains disabled because race-safe conditional writes have not been established. See the [end-to-end test report](docs/END_TO_END_TEST_REPORT.md), [known limitations](docs/KNOWN_LIMITATIONS.md), [installation verification](docs/INSTALLATION_VERIFICATION_REPORT.md), [security review](docs/SECURITY_REVIEW.md) and [competition readiness report](docs/FINAL_COMPETITION_READINESS_REPORT.md) for evidence and scope.
+
+## Companion CLI
+
+The [FlagForge CLI package](cli/README.md) delegates provider operations to the official Flagsmith CLI and adds a read-only local Python/JavaScript/TypeScript scanner. Install the upstream Flagsmith CLI by its official instructions, then install the companion with `python -m pip install -e ./cli`. The upstream CLI has no documented plugin API; FlagForge is a companion wrapper, not a plugin or fork.
+
+```powershell
+flagforge --help
+flagforge init --api-url http://localhost:8081
+flagforge doctor
+flagforge scan .
+```
+
+Scanning, provider reads and read-only cleanup preview are implemented in the CLI. Named environment diff and PR creation require further work; sync is dry-run-only. See its README for command coverage and safety limits.
 
 ## Documentation
 

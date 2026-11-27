@@ -106,7 +106,9 @@ class DeterministicRiskEngine:
             action = "MANUAL_APPROVAL_REQUIRED"
         else:
             band = RiskBand.CRITICAL
-            action = "TRIGGER_AUTOMATED_ROLLBACK"
+            # Rollback is not implemented with provider-side concurrency guarantees.
+            # A critical score must remain advisory and require a human decision.
+            action = "MANUAL_APPROVAL_REQUIRED"
 
         if not telemetry_sufficient:
             action = "MANUAL_APPROVAL_REQUIRED"
@@ -131,6 +133,7 @@ class DeterministicRiskEngine:
                 "telemetry_confidence": "SUFFICIENT" if telemetry_sufficient else "INSUFFICIENT",
                 "telemetry_request_count": telem.get("total_requests", 0),
                 "telemetry_window_count": telem.get("samples_count", 0),
+                "rollback_available": False,
             },
             recommended_action=action,
         )

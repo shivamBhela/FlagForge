@@ -69,11 +69,31 @@ export default function IntegrationsPage() {
   };
 
   useEffect(() => {
-    if (currentOrg) {
-      loadConnections();
-    } else {
-      setLoading(false);
+    let ignore = false;
+    if (!currentOrg) {
+      void Promise.resolve().then(() => {
+        if (!ignore) setLoading(false);
+      });
+      return () => {
+        ignore = true;
+      };
     }
+    const fetchConnections = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const connectionList = await api.flagsmith.listConnections(currentOrg.id);
+        if (!ignore) setConnections(connectionList);
+      } catch (loadError: any) {
+        if (!ignore) setError(loadError.message || "Failed to load Flagsmith connections.");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    void fetchConnections();
+    return () => {
+      ignore = true;
+    };
   }, [currentOrg]);
 
   const handleTestConnection = async () => {

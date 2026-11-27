@@ -29,7 +29,26 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    loadMembers();
+    if (!currentOrg) return;
+    let ignore = false;
+    const fetchMembers = async () => {
+      setLoading(true);
+      try {
+        const memberList = await api.organizations.listMembers(currentOrg.id);
+        if (!ignore) {
+          setMembers(memberList);
+          setError("");
+        }
+      } catch (loadError: any) {
+        if (!ignore) setError(loadError.message || "Failed to load organization members.");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    void fetchMembers();
+    return () => {
+      ignore = true;
+    };
   }, [currentOrg]);
 
   const handleAddMember = async (e: React.FormEvent) => {

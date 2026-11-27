@@ -28,6 +28,7 @@ export default function FeatureFlagsPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [appliedSearchQuery, setAppliedSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState("");
@@ -46,7 +47,7 @@ export default function FeatureFlagsPage() {
         api.projects.list(currentOrg.id),
         api.flagsmith.listFlags(currentOrg.id, {
           project_id: selectedProject || undefined,
-          query: searchQuery.trim() || undefined,
+          query: appliedSearchQuery || undefined,
         }),
       ]);
       setProjects(projList);
@@ -59,16 +60,45 @@ export default function FeatureFlagsPage() {
   };
 
   useEffect(() => {
-    if (currentOrg) {
-      loadData();
-    } else {
-      setLoading(false);
+    let ignore = false;
+    if (!currentOrg) {
+      void Promise.resolve().then(() => {
+        if (!ignore) setLoading(false);
+      });
+      return () => {
+        ignore = true;
+      };
     }
-  }, [currentOrg, selectedProject]);
+    const fetchData = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const [projectList, flagList] = await Promise.all([
+          api.projects.list(currentOrg.id),
+          api.flagsmith.listFlags(currentOrg.id, {
+            project_id: selectedProject || undefined,
+            query: appliedSearchQuery || undefined,
+          }),
+        ]);
+        if (!ignore) {
+          setProjects(projectList);
+          setFlags(flagList);
+        }
+      } catch (loadError: any) {
+        if (!ignore) setError(loadError.message || "Failed to load feature flags.");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    void fetchData();
+    return () => {
+      ignore = true;
+    };
+  }, [currentOrg, selectedProject, appliedSearchQuery]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    loadData();
+    setAppliedSearchQuery(searchQuery.trim());
   };
 
   const handleCopyKey = (key: string) => {
