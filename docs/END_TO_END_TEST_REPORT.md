@@ -20,7 +20,7 @@
 | Clean-checkout installation | **Passed** | Committed `acd08d4` cloned separately, documented `setup.ps1` built and started the stack with a distinct Compose name/volumes; all service and HTTP health checks passed. |
 | `npm run lint` | **Passed** | All 34 previously recorded findings were fixed; no rule suppression or configuration weakening. |
 | Latest headed Playwright rerun | **Failed / blocked** | Registration remained on `/register` with `Creating account...`; POST to `localhost:8000/api/v1/auth/register` stayed pending. This supersedes the earlier passing workflow as the latest end-to-end outcome. |
-| Latest Docker status check | **Blocked** | Docker Desktop showed 3.50 GB / 3.58 GB VM memory and Flagsmith restart stuck at 0%; Docker CLI status commands did not return. A supported Docker Desktop restart was requested and the latest UI shows “Engine stopping.” Existing volumes were preserved. |
+| Latest Docker status check | **Blocked** | Docker Desktop showed 3.50 GB / 3.58 GB VM memory and Flagsmith restart stuck at 0%. Restart failed with `Wsl/Service/CreateInstance/HCS_E_CONNECTION_TIMEOUT`; terminating only `docker-desktop` WSL succeeded, but Docker still cannot start. Ubuntu WSL and named volumes were not touched. |
 | Companion CLI unit tests | **Passed** | `python -m unittest discover -s cli/tests -v`: 6 passed. |
 | Latest frontend lint/type/build | **Passed** | `npm run lint`, `npx tsc --noEmit`, and `npm run build` exited 0; build generated 20 routes. |
 

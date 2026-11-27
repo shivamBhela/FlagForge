@@ -8,7 +8,7 @@ Statuses mean: **PASS** directly tested; **PARTIAL** functionality or evidence i
 
 ## 1. Executive summary
 
-FlagForge has working dashboard/backend capabilities and a newly added Python companion CLI that delegates supported Flagsmith operations to the official CLI. Backend, frontend lint/type/build, CLI unit tests, and an earlier headed browser run passed. A later headed browser rerun found that registration hangs. Docker Desktop showed the Flagsmith container restart stuck at 0%, the VM near its 3.58 GB memory limit, and the registration request pending; Docker CLI commands also stopped responding. A supported Docker Desktop restart was then requested, and the engine remains in “Engine stopping” in the latest UI observation. Therefore the latest complete end-to-end run is **BLOCKED/FAILED**, and Docker health is not currently confirmed. The report does not claim full completion or production readiness.
+FlagForge has working dashboard/backend capabilities and a newly added Python companion CLI that delegates supported Flagsmith operations to the official CLI. Backend, frontend lint/type/build, CLI unit tests, and an earlier headed browser run passed. A later headed browser rerun found that registration hangs. Docker Desktop showed the Flagsmith container restart stuck at 0%, the VM near its 3.58 GB memory limit, and the registration request pending; Docker CLI commands also stopped responding. A supported Docker Desktop restart failed with `Wsl/Service/CreateInstance/HCS_E_CONNECTION_TIMEOUT`. Terminating only Docker's `docker-desktop` WSL distro succeeded, but the app still cannot start its engine; the Ubuntu WSL distro was not touched. Therefore the latest complete end-to-end run is **BLOCKED/FAILED**, and Docker health is not currently confirmed. The report does not claim full completion or production readiness.
 
 ## 2. What was already present
 
@@ -90,7 +90,7 @@ FlagForge has working dashboard/backend capabilities and a newly added Python co
 ## 14. Docker and deployment status
 
 - **PASS (prior verified run):** Compose configuration and migrations were previously verified; FlagForge Alembic head was `009_encrypt_webhook_secrets`, and Flagsmith migration containers exited successfully. Existing named volumes were preserved.
-- **BLOCKED (current):** Docker Desktop showed engine memory at 3.50 GB of 3.58 GB and the Flagsmith web container restart stuck at 0%. Its visible logs included Gunicorn worker timeouts and a SIGKILL “Perhaps out of memory?” message. `docker compose ps`, `docker info`, and a targeted Compose recreate did not return within their command timeouts. A supported Docker Desktop restart was requested; latest UI state is “Engine stopping.” Current health of all services is unknown; no volumes were deleted.
+- **BLOCKED (current):** Docker Desktop showed engine memory at 3.50 GB of 3.58 GB and the Flagsmith web container restart stuck at 0%. Its visible logs included Gunicorn worker timeouts and a SIGKILL “Perhaps out of memory?” message. `docker compose ps`, `docker info`, and a targeted Compose recreate did not return within their command timeouts. A supported Docker Desktop restart failed with `Wsl/Service/CreateInstance/HCS_E_CONNECTION_TIMEOUT`; terminating only the Docker-managed `docker-desktop` WSL distro returned successfully, but Docker still reports the engine unable to start. Current health of all services is unknown; named volumes and the user's Ubuntu WSL distro were not touched. A Windows restart or elevated WSL service recovery may be required and is pending user approval.
 - **PARTIAL:** Compose now defaults Flagsmith Gunicorn workers to one on constrained hosts. A successful recreate with that value remains pending.
 - **NOT VERIFIED:** Clean deployment after the latest configuration change, public ingress/TLS, restore-from-backup, HA, and production load.
 
@@ -125,7 +125,7 @@ FlagForge has working dashboard/backend capabilities and a newly added Python co
 ## 17. Known issues and limitations
 
 1. Latest browser registration hangs while the local Flagsmith/API stack is unhealthy or unresponsive.
-2. Docker Desktop has very little VM memory headroom; the Flagsmith restart and Docker CLI both stalled.
+2. Docker Desktop currently cannot start its WSL engine (`HCS_E_CONNECTION_TIMEOUT`); a Windows restart or elevated WSL service recovery may be needed.
 3. CLI environment diff, authenticated telemetry queries, provider mutation workflow, and GitHub PR creation are missing or partial.
 4. Scanner coverage is pattern-limited and no recall benchmark exists.
 5. Remote rollback, live Chaos experiments, provider retries/outage scenarios, rate limiting, TLS/ingress, and disaster recovery remain incomplete/unverified.
@@ -154,7 +154,7 @@ flagforge report --format markdown
 
 ## 20. Remaining blockers and recommended next actions
 
-1. Recover Docker Desktop without deleting or pruning named volumes; apply the one-worker Flagsmith setting and verify all services/migrations.
+1. After approval, restart Windows or recover the WSL service, then start Docker Desktop without deleting or pruning named volumes; apply the one-worker Flagsmith setting and verify all services/migrations.
 2. Re-run registration through headed Chromium; inspect browser network, API and Flagsmith logs; fix the root cause and repeat login/logout, persistence, and end-to-end workflows.
 3. Re-run the complete backend, frontend lint/type/build, CLI suite, Docker health/migration checks, and Playwright suite against the recovered stack.
 4. Implement or clearly defer the missing CLI workflows (`diff`, live monitor context, safe PR preparation) and add command-level tests.

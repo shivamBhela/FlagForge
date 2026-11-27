@@ -4,7 +4,7 @@
 
 - **Status:** Earlier verified flows remain documented, but the current Docker stack is blocked and the latest registration browser rerun failed. This is not a production-readiness claim.
 - **Assessment date:** 2026-11-28.
-- **Docker:** Prior check showed all 10 long-running services healthy and both migration jobs exited 0. Current Docker Desktop reports 3.50/3.58 GB VM memory; Flagsmith restart is stuck at 0%, Docker CLI status commands time out, and a supported Docker Desktop restart now shows “Engine stopping.” No named volumes were removed.
+- **Docker:** Prior check showed all 10 long-running services healthy and both migration jobs exited 0. Current Docker Desktop reports 3.50/3.58 GB VM memory; Flagsmith restart stalled at 0%, then Docker restart failed with `HCS_E_CONNECTION_TIMEOUT`. Terminating only the Docker-managed WSL distro returned successfully, but Docker still cannot start. The Ubuntu WSL distro and named volumes were not touched. Windows restart/elevated WSL recovery is pending approval.
 - **Database:** Alembic head is `009_encrypt_webhook_secrets`. Flagsmith uses its separate PostgreSQL volume.
 - **Backend:** `docker compose run --rm --no-deps --build api python -m pytest tests/ -v` — **35 passed**, one Starlette/httpx deprecation warning.
 - **Frontend:** Next.js 16.4.6, React 19.3.1. Full ESLint (zero findings), TypeScript and production build pass. `npm audit` and `npm audit --omit=dev` report zero vulnerabilities.
