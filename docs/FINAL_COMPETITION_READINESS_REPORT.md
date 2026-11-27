@@ -21,7 +21,7 @@
 | Chaos Lab | **Synthetic / demo only** | Browser scenario explicitly identifies synthetic Staging simulation; no load, no provider mutation. |
 | Runtime monitoring | **Live-verified with demo traffic** | Demo-app OTLP traversed Collector and authenticated ingestion into tenant-attributed storage; Monitor and Risk Engine used persisted histogram data. Not customer traffic. |
 | Release Guardian | **Implemented; rollback disabled for safety** | Risk evaluation works. Rollback endpoint returns explicit HTTP 501 with no provider mutation because race-safe conditional-write behavior is not established. |
-| Cleanup Studio / GitHub | **Implemented; live use blocked by empty repository** | Reviewed real-file diff, explicit approval and mocked API/tenant tests cover separate branch/PR behavior. Connected repository is public but empty; no branch, commit or PR has been created. |
+| Cleanup Studio / GitHub | **Implemented; live use blocked by Git authentication** | Reviewed real-file diff, explicit approval and mocked API/tenant tests cover separate branch/PR behavior. The public repository has no refs; `origin` is now configured, but Git Credential Manager supplied no credential in a noninteractive push check. No branch or PR has been created. |
 | Redis worker restart | **Passed** | New worker recovery script verified a queued job completes after restart, graceful SIGTERM, heartbeat removal and healthy restart. |
 | Security | **Partially verified** | Secret encryption, JWT/RBAC/tenant tests, SSRF checks, signed webhook validation, loopback-only ports and zero npm audit findings. Request rate limiting is not implemented. No independent security audit, public TLS, backup restore or HA test. |
 
@@ -46,7 +46,7 @@ Latest reruns: CLI unit tests passed (5); frontend lint, TypeScript check, and p
 ### High
 
 - Do not expose the local Compose stack publicly: production TLS/ingress, backup/restore, HA and independent security review are not evidenced.
-- GitHub PR flow has no live test: the connected public repository is empty and local Git has no configured authenticated remote. The GitHub connector reports push permission, but no branch or PR exists.
+- GitHub PR flow has no live test: the connected public repository is empty; `origin` now points to it, but local Git has no usable credential. Git Credential Manager browser sign-in is required before push; no branch or PR exists.
 
 ### Medium
 
@@ -64,7 +64,7 @@ Latest reruns: CLI unit tests passed (5); frontend lint, TypeScript check, and p
 - **Real external-style integration:** local official Flagsmith API and webhook delivery over the private Compose network.
 - **Mocked:** GitHub App/PAT API contract and pull-request workflow tests.
 - **Synthetic/demo:** Chaos scenarios and demo-app telemetry.
-- **Unavailable:** GitHub live branch/commit/PR lifecycle because the repository has no refs and local Git authentication is not configured.
+- **Unavailable:** GitHub live branch/commit/PR lifecycle because the repository has no refs and the local Git Credential Manager has no usable credential for the push.
 - **Disabled:** remote rollback.
 
 Full evidence and remaining gaps are tracked in the [end-to-end test report](END_TO_END_TEST_REPORT.md), [known limitations](KNOWN_LIMITATIONS.md), [installation verification report](INSTALLATION_VERIFICATION_REPORT.md) and [security review](SECURITY_REVIEW.md).

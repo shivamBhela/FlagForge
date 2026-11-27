@@ -21,7 +21,7 @@
 - [x] Run documented setup in a clean isolated checkout with separate volumes; retain the existing default volumes.
 - [x] Update reports with clean-checkout result. Commit the final evidence docs after restoring and verifying the default deployment.
 - [x] Reduce the 34 ESLint findings without weakening lint rules.
-- [ ] Publish branch and verify GitHub PR flow. Connected public repository is empty; local Git has no authenticated remote configured, although GitHub connector confirms push permission.
+- [ ] Complete Git Credential Manager browser sign-in, push `completion/final-readiness`, and verify the remote commit. The public remote is empty; `origin` is configured, but a noninteractive push check lacked credentials. No force-push or PR/merge has occurred.
 - [ ] Recover Docker Desktop without removing volumes. Current Flagsmith restart is stuck at 0%, VM memory is 3.50/3.58 GB, and Docker CLI status calls time out.
 - [ ] Fix the latest browser registration POST hang and rerun headed Playwright. Earlier E2E PASS does not replace the latest failure.
 - [ ] Rerun API-container pytest after Docker recovers; host-only pytest is blocked because this host Python environment lacks `redis`.

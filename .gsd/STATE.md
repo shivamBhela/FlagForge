@@ -28,7 +28,7 @@
 
 ## Remaining limitations and follow-up
 
-- Live GitHub API/PR lifecycle is blocked: remote repository has no refs and local Git has no authenticated remote configured.
+- Live GitHub API/PR lifecycle is blocked: `origin` now points to the public repository, but `git ls-remote` is empty and Git Credential Manager supplied no credential during a noninteractive push check. Browser sign-in is required before push.
 - Remote rollback remains HTTP 501 and makes no provider change because race-safe conditional writes are not established.
 - Chaos Lab is synthetic; it sends no load and performs no remote mutation.
 - Worker scope remains Flagsmith sync and repository scans; other lightweight operations remain synchronous.

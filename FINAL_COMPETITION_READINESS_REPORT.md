@@ -71,7 +71,7 @@ FlagForge has working dashboard/backend capabilities and a newly added Python co
 
 - **PASS:** Dashboard cleanup suggestions/preview were inspected in the earlier browser run; no destructive cleanup was triggered.
 - **PARTIAL:** CLI `cleanup preview` is now the documented command and is preview-only; it currently returns no candidates without sufficient provider comparison.
-- **BLOCKED:** No live GitHub PR/branch was created. The connected public repository was previously observed empty; local Git has no configured remote, and current credentialed push was not verified. No merge was attempted.
+- **BLOCKED:** No live GitHub PR/branch was created. Current `git ls-remote origin` returns no refs; the repository metadata names `main` as the default branch. `origin` is now configured to `https://github.com/shivamBhela/FlagForge.git`. Git Credential Manager 2.6.1 is installed and lists GitHub accounts, but a noninteractive push dry run failed with “could not read Username”; GitHub CLI is not installed. No branch was pushed and no merge was attempted. User must complete Git Credential Manager browser sign-in before retrying.
 - **NOT IMPLEMENTED:** CLI `github pr` deliberately does not create a branch or PR; it directs users to the dashboard workflow.
 
 ## 12. Flagsmith integration verification
@@ -120,7 +120,7 @@ FlagForge has working dashboard/backend capabilities and a newly added Python co
 | Official Flagsmith CLI | PASS | `npx --yes @flagsmith/cli@2.0.0 --help`; live local `evaluate` returned a response. |
 | Browser E2E | FAIL (latest) | Headed Playwright registration POST remained pending; screenshot/trace in ignored `frontend/test-results/`. Earlier run passed but is not the latest result. |
 | Docker/migrations | BLOCKED (current) | Docker CLI timed out; service state could not be re-read. Prior migration and health evidence is retained above. |
-| GitHub live PR | NOT VERIFIED | No remote/PR URL. |
+| GitHub live PR | BLOCKED | Empty remote; `origin` configured; local Git lacks a usable credential; no remote branch or PR URL. |
 
 ## 17. Known issues and limitations
 
