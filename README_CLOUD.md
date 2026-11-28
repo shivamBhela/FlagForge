@@ -1,10 +1,10 @@
-# FlagForge — Cloud Deployment
+# FlagForge — Cloud Deployment Reference
 
-> Cloud deployment guide for FlagForge. The platform uses the same application code and database model as the self-hosted edition. Cloud infrastructure changes how services are hosted, scaled, secured and operated; it does not change the product's core algorithms.
+> **Reference design only — not a deployment record.** FlagForge has no verified public deployment or public URL. This document describes a possible cloud architecture and operational checklist; the services and controls below must not be read as currently provisioned or production-ready. The verified deployment is local Docker Compose; see `README.md` and `docs/FINAL_COMPETITION_READINESS_REPORT.md` for current evidence.
 
 ## 1. Overview
 
-FlagForge is a feature-release intelligence platform integrated with Flagsmith. It provides code scanning, dependency analysis, isolated simulations, runtime telemetry, deterministic risk assessment, policy-governed rollback and AI explanations.
+FlagForge is a local feature-flag release-intelligence prototype integrated with Flagsmith. Current verified capabilities and limitations are described in the readiness report. The cloud architecture, policy-governed rollback and AI services in this reference are not evidence of deployed or verified product capabilities.
 
 Cloud mode is intended for teams that prefer managed infrastructure. FlagForge can connect to either Flagsmith Cloud or a separately hosted Flagsmith instance.
 

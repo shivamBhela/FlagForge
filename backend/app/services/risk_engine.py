@@ -15,6 +15,17 @@ from app.services.telemetry_pipeline import TelemetryPipeline
 logger = logging.getLogger("risk-engine")
 
 
+def classify_risk_score(score: float) -> tuple[RiskBand, str]:
+    """Map a bounded score to its documented release-safety band and action."""
+    if score < 30.0:
+        return RiskBand.LOW, "ALLOW_ROLLOUT"
+    if score < 50.0:
+        return RiskBand.MODERATE, "PROCEED_WITH_CANARY"
+    if score < 75.0:
+        return RiskBand.HIGH, "MANUAL_APPROVAL_REQUIRED"
+    return RiskBand.CRITICAL, "MANUAL_APPROVAL_REQUIRED"
+
+
 class DeterministicRiskEngine:
     """Calculates deterministic, auditable risk scores (0-100) using configurable mathematical weights."""
 
@@ -94,21 +105,9 @@ class DeterministicRiskEngine:
         )
         score = round(min(100.0, max(0.0, score)), 2)
 
-        # Determine band
-        if score < 30.0:
-            band = RiskBand.LOW
-            action = "ALLOW_ROLLOUT"
-        elif score < 50.0:
-            band = RiskBand.MODERATE
-            action = "PROCEED_WITH_CANARY"
-        elif score < 75.0:
-            band = RiskBand.HIGH
-            action = "MANUAL_APPROVAL_REQUIRED"
-        else:
-            band = RiskBand.CRITICAL
-            # Rollback is not implemented with provider-side concurrency guarantees.
-            # A critical score must remain advisory and require a human decision.
-            action = "MANUAL_APPROVAL_REQUIRED"
+        # A critical score remains advisory; rollback has no provider-side
+        # concurrency guarantees and still requires a human decision.
+        band, action = classify_risk_score(score)
 
         if not telemetry_sufficient:
             action = "MANUAL_APPROVAL_REQUIRED"

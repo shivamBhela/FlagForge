@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import ast
 import fnmatch
+import getpass
 import json
 import os
 import re
@@ -103,6 +104,9 @@ def run_provider(args: list[str], *, json_output: bool = False, check: bool = Tr
         detail = (result.stderr or result.stdout).strip()
         # Provider output can contain API response data. Never echo credentials.
         detail = re.sub(r"(?i)(api[_ -]?key|token|authorization)\s*[:=]\s*\S+", r"\1=[redacted]", detail)
+        if extra_env:
+            for secret in sorted((value for value in extra_env.values() if value), key=len, reverse=True):
+                detail = detail.replace(secret, "[redacted]")
         raise CliError(f"Flagsmith CLI command failed ({result.returncode}): {detail[:500] or 'no details'}", result.returncode)
     return result
 
@@ -112,6 +116,75 @@ def parse_json_output(result: subprocess.CompletedProcess[str], label: str) -> A
         return json.loads(result.stdout)
     except json.JSONDecodeError as exc:
         raise CliError(f"Official Flagsmith CLI did not return valid JSON for {label}; rerun with its documented --json output.", 1) from exc
+
+
+def environment_sdk_key(label: str, variable: str, *, no_input: bool = False) -> str:
+    key = os.environ.get(variable, "").strip()
+    if not key and sys.stdin.isatty() and not no_input:
+        key = getpass.getpass(f"{label} Flagsmith environment key (input hidden): ").strip()
+    if not key:
+        raise CliError(f"Set {variable} or run this command in a terminal to enter the key privately. Key values are never displayed.", 3)
+    return key
+
+
+def normalize_flag_list(value: Any, label: str) -> dict[str, dict[str, Any]]:
+    """Normalize the documented official CLI flag-list JSON to enabled/value states."""
+    if isinstance(value, dict):
+        value = value.get("results", value.get("flags"))
+    if not isinstance(value, list):
+        raise CliError(f"Flagsmith returned an unsupported flag-list shape for {label}.", 1)
+
+    flags: dict[str, dict[str, Any]] = {}
+    for item in value:
+        if not isinstance(item, dict):
+            raise CliError(f"Flagsmith returned an unsupported flag entry for {label}.", 1)
+        feature = item.get("feature")
+        name = item.get("name") or item.get("key")
+        if not name and isinstance(feature, dict):
+            name = feature.get("name") or feature.get("key")
+        if not name and isinstance(feature, str):
+            name = feature
+        if not isinstance(name, str) or not name:
+            raise CliError(f"Flagsmith returned a flag without a stable name for {label}.", 1)
+        if name in flags:
+            raise CliError(f"Flagsmith returned duplicate flag name {name!r} for {label}; refusing an ambiguous diff.", 1)
+        state = {"enabled": item.get("enabled")}
+        if "value" in item:
+            state["value"] = item["value"]
+        elif "feature_state_value" in item:
+            state["value"] = item["feature_state_value"]
+        flags[name] = state
+    return flags
+
+
+def diff_environments(source: str, target: str, *, no_input: bool = False) -> dict[str, Any]:
+    source_key = environment_sdk_key("Source", "FLAGSMITH_SOURCE_ENVIRONMENT_KEY", no_input=no_input)
+    target_key = environment_sdk_key("Target", "FLAGSMITH_TARGET_ENVIRONMENT_KEY", no_input=no_input)
+    if source_key == target_key:
+        raise CliError("Source and target environment keys must differ; no comparison was made.", 2)
+
+    def load(label: str, key: str) -> dict[str, dict[str, Any]]:
+        result = run_provider(
+            ["flag", "list", "--json"], json_output=True,
+            extra_env={"FLAGSMITH_ENVIRONMENT": key},
+        )
+        return normalize_flag_list(parse_json_output(result, f"{label} environment flag list"), label)
+
+    source_flags = load(source, source_key)
+    target_flags = load(target, target_key)
+    source_names, target_names = set(source_flags), set(target_flags)
+    return {
+        "source_environment": source,
+        "target_environment": target,
+        "source_only": [{"flag": name, **source_flags[name]} for name in sorted(source_names - target_names)],
+        "target_only": [{"flag": name, **target_flags[name]} for name in sorted(target_names - source_names)],
+        "changed": [
+            {"flag": name, "source": source_flags[name], "target": target_flags[name]}
+            for name in sorted(source_names & target_names) if source_flags[name] != target_flags[name]
+        ],
+        "unchanged_count": sum(source_flags[name] == target_flags[name] for name in source_names & target_names),
+        "comparison": "read-only enabled/value state via the official Flagsmith CLI",
+    }
 
 
 def gitignore_patterns(root: Path) -> list[str]:
@@ -370,6 +443,7 @@ def parser() -> argparse.ArgumentParser:
     diff = commands.add_parser("diff", help="Compare Flagsmith environments")
     diff.add_argument("source")
     diff.add_argument("target")
+    diff.add_argument("--no-input", action="store_true", help="Do not prompt for missing environment keys")
     sync = commands.add_parser("sync", help="Preview configuration synchronization")
     sync.add_argument("--dry-run", action="store_true", help="Required: this CLI never mutates provider flags")
     risk = commands.add_parser("risk", help="Release risk tools")
@@ -487,7 +561,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "diff":
-            raise CliError("Named environment diff is not yet supported by this companion CLI. Use the FlagForge dashboard's live environment views; no environment-key handling is guessed.", 3)
+            emit(diff_environments(args.source, args.target, no_input=args.no_input), json_output=args.json)
+            return 0
 
         if args.command == "risk":
             base = args.api_url if hasattr(args, "api_url") else os.environ.get("FLAGFORGE_API_URL", "http://localhost:8000")

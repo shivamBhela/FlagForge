@@ -49,7 +49,7 @@ For the containerized backend suite (recommended when Docker is running):
 docker compose run --rm --no-deps --build api python -m pytest tests/ -v
 ```
 
-The worker runs Redis Streams jobs for Flagsmith sync and repository scans. Demo-app OTLP metrics flow through the Collector into the authenticated FlagForge telemetry store and Risk Engine. Chaos Lab remains a non-mutating simulation. A signed local Flagsmith webhook and Staging-only flag update/restore were live-verified. GitHub PR workflow is implemented and mock-tested, but live GitHub verification requires credentials. Remote rollback remains disabled because race-safe conditional writes have not been established. See the [end-to-end test report](docs/END_TO_END_TEST_REPORT.md), [known limitations](docs/KNOWN_LIMITATIONS.md), [installation verification](docs/INSTALLATION_VERIFICATION_REPORT.md), [security review](docs/SECURITY_REVIEW.md) and [competition readiness report](docs/FINAL_COMPETITION_READINESS_REPORT.md) for evidence and scope.
+The worker runs Redis Streams jobs for Flagsmith sync and repository scans. Demo-app OTLP metrics flow through the Collector into the authenticated FlagForge telemetry store and Risk Engine; this is demo traffic, not customer telemetry. Chaos Lab remains a synthetic, non-mutating simulation. A signed local Flagsmith webhook and Staging-only flag update/restore were live-verified in earlier QA, but fresh provider authentication and synchronization were not reverified in the latest run. FlagForge's GitHub cleanup PR workflow is implemented and mock-tested; the existing repository draft PR is a separate publication flow. Remote rollback remains disabled because race-safe conditional writes have not been established. See the [end-to-end test report](docs/END_TO_END_TEST_REPORT.md), [known limitations](docs/KNOWN_LIMITATIONS.md), [installation verification](docs/INSTALLATION_VERIFICATION_REPORT.md), [security review](docs/SECURITY_REVIEW.md) and [competition readiness report](docs/FINAL_COMPETITION_READINESS_REPORT.md) for evidence and scope.
 
 ## Companion CLI
 
@@ -62,7 +62,7 @@ flagforge doctor
 flagforge scan .
 ```
 
-Scanning, provider reads and read-only cleanup preview are implemented in the CLI. Named environment diff and PR creation require further work; sync is dry-run-only. See its README for command coverage and safety limits.
+Scanning, read-only provider reads, environment diff, and cleanup preview are implemented in the CLI. PR creation requires the reviewed dashboard workflow; sync is dry-run-only. See its README for command coverage and safety limits.
 
 ## Documentation
 

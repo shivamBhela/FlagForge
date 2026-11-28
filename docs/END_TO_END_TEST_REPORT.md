@@ -13,19 +13,19 @@
 | `docker compose up --build -d` | **Passed** | Default stack recreated with generated names and scoped network; named volumes were retained. |
 | `scripts/health-check.ps1` | **Passed** | All 10 long-running services healthy; both one-shot migration containers exited 0; HTTP checks passed for API, web, demo app, Flagsmith liveness and Collector health. |
 | Alembic current | **Passed** | `009_encrypt_webhook_secrets (head)`. |
-| Backend pytest in project container | **Passed** | 35 passed, one Starlette/httpx deprecation warning. |
-| Backend pytest in isolated host venv | **Passed (current)** | `backend\.venv\Scripts\python.exe -m pytest -q`: 35 passed, one upstream Starlette/httpx deprecation warning. |
+| Backend pytest in project container | **Passed (earlier run)** | 35 passed, one Starlette/httpx deprecation warning. |
+| Backend pytest in isolated host venv | **Passed (latest)** | `backend\.venv\Scripts\python.exe -m pytest -q`: 43 passed, one upstream Starlette/httpx deprecation warning; includes eight risk-band boundary cases. |
 | `npx tsc --noEmit` | **Passed** | Exit code 0. |
 | `npm run build` | **Passed** | Next.js 16.4.6 production build generated all 20 app routes. |
 | `npm audit` / `npm audit --omit=dev` | **Passed** | Both report zero known vulnerabilities. |
 | Headed Playwright Chromium | **Passed** | 1 end-to-end workflow passed against the rebuilt production container and again against a fresh isolated checkout. |
 | Clean-checkout installation | **Passed** | Committed `acd08d4` cloned separately, documented `setup.ps1` built and started the stack with a distinct Compose name/volumes; all service and HTTP health checks passed. |
 | `npm run lint` | **Passed** | All 34 previously recorded findings were fixed; no rule suppression or configuration weakening. |
-| Latest headed Playwright run | **Passed (current Compose run)** | 1 test passed in 14.8 seconds against Compose web/API/PostgreSQL. Invalid-form validation, registration/login, org/project/environment CRUD, 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, 390px mobile width, logout/login and persistence passed. No page errors, HTTP 5xx or unexpected failed requests; navigation cancellations are separately recorded. |
+| Latest headed Playwright run | **Passed (latest Compose run)** | 1 test passed in 23.9 seconds against Compose web/API/PostgreSQL. Invalid-form validation, registration/login, org/project/environment CRUD, 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, 390px mobile width, logout/login and persistence passed. No page errors, HTTP 5xx or unexpected failed requests; navigation cancellations are separately recorded. |
 | Latest Docker status check | **Passed** | Ten long-running services healthy; both one-shot migrations exited 0; Alembic `009_encrypt_webhook_secrets (head)`; Full profile health and HTTP checks passed. |
-| Docker memory snapshot | **Passed (point-in-time)** | `docker stats --no-stream` measured approximately 1.15 GiB across ten running services against the 3.67 GiB Docker VM limit; this was not a peak/load/soak measurement. |
-| Companion CLI unit tests | **Passed (current)** | `python -m unittest discover -s cli/tests -v`: 8 passed, including GitHub ZIP endpoint and JavaScript comment exclusion. |
-| Latest frontend lint/type/build | **Passed** | `npm run lint`, `npx tsc --noEmit`, and `npm run build` exited 0; build generated 20 routes. |
+| Docker memory snapshot | **Passed (point-in-time)** | Latest `docker stats --no-stream` measured approximately 0.98 GiB across ten running services against the 3.67 GiB Docker VM limit; this was not a peak/load/soak measurement. |
+| Companion CLI unit tests | **Passed (latest; diff responses mocked)** | `python -m unittest discover -s cli/tests -v`: 12 passed, including environment diff classification, duplicate/same-environment rejection, no-input handling and provider error redaction. |
+| Latest frontend lint/type/build | **Passed** | `npm run lint`, `npx tsc --noEmit`, and `npm run build` exited 0; build generated 20 routes. Full and production-only `npm audit` each reported zero vulnerabilities. |
 
 ## Browser workflow
 
@@ -45,6 +45,8 @@ The earlier Docker-backed registration request remained pending during the Flags
 
 The fresh isolated checkout at `C:\Users\unbel\Downloads\FlagForge_CleanInstall_QA` also passed the headed Playwright run (1 passed, 32.6 seconds). The default project's named volumes were preserved; the fresh checkout created a separate set of volumes. Both installs ran on the same Windows/Docker Desktop host.
 
+The read-only CLI environment diff has mocked response coverage only; no source/target environment keys were supplied for a live comparison. Current QA did not reconnect to Flagsmith; the earlier local Management API and Staging webhook/sync results below are historical live evidence. Safe database backup and isolated restore instructions are documented in `DOCKER_SETUP.md`; a restore drill was not performed.
+
 ## Real and mocked integrations
 
 - **Flagsmith real local API:** official 2.295.2 instance, pinned by digest. Existing evidence covers project/environment/flag discovery and synchronization, including Staging-only state change detection; Development and Production remained unchanged.
@@ -60,5 +62,5 @@ The fresh isolated checkout at `C:\Users\unbel\Downloads\FlagForge_CleanInstall_
 - A second physical machine was not available; clean install evidence covers a separate checkout with isolated volumes on this host only.
 - Live GitHub authentication/PR lifecycle and race-safe provider rollback are unverified.
 - Provider webhook retries, TLS/public ingress, backup restore, HA/load and independent penetration testing are unverified.
-- Public hosting is not deployed; no hosting provider/account connection was available, and no charges were incurred.
+- Public hosting is not deployed. Render's free service limits do not support this persistent Compose architecture; Oracle account eligibility and A1 capacity remain unknown pending sign-in. No resources or charges were created.
 - Request rate limiting is not implemented. TypeScript, full lint and production build pass.

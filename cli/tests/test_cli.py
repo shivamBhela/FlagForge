@@ -1,6 +1,8 @@
 import importlib.util
 import io
 import json
+import os
+import subprocess
 import tempfile
 import unittest
 import zipfile
@@ -86,6 +88,70 @@ const enabled = flagsmith.hasFeature("real_flag");
         self.assertEqual(request.full_url, "https://api.github.com/repos/owner/repo/zipball")
         result = cli.scan_archive(payload)
         self.assertEqual([ref["flag_key"] for ref in result["references"]], ["checkout"])
+
+    def test_environment_diff_reports_only_read_only_state_changes_without_exposing_keys(self):
+        source_key = "source-sdk-key-do-not-print"
+        target_key = "target-sdk-key-do-not-print"
+        source = [
+            {"name": "checkout", "enabled": True, "feature_state_value": "v1"},
+            {"feature": {"name": "unchanged"}, "enabled": False, "value": None},
+            {"name": "source_only", "enabled": True},
+        ]
+        target = [
+            {"name": "checkout", "enabled": False, "feature_state_value": "v2"},
+            {"feature": {"name": "unchanged"}, "enabled": False, "value": None},
+            {"key": "target_only", "enabled": True},
+        ]
+
+        with patch.dict(os.environ, {
+            "FLAGSMITH_SOURCE_ENVIRONMENT_KEY": source_key,
+            "FLAGSMITH_TARGET_ENVIRONMENT_KEY": target_key,
+        }):
+            with patch.object(cli, "run_provider", side_effect=[
+                subprocess.CompletedProcess([], 0, json.dumps(source), ""),
+                subprocess.CompletedProcess([], 0, json.dumps(target), ""),
+            ]) as provider, patch("sys.stdout", new_callable=io.StringIO) as stdout:
+                self.assertEqual(cli.main(["--json", "diff", "staging", "production"]), 0)
+
+        calls = provider.call_args_list
+        self.assertEqual(calls[0].kwargs["extra_env"]["FLAGSMITH_ENVIRONMENT"], source_key)
+        self.assertEqual(calls[1].kwargs["extra_env"]["FLAGSMITH_ENVIRONMENT"], target_key)
+        output = stdout.getvalue()
+        self.assertNotIn(source_key, output)
+        self.assertNotIn(target_key, output)
+        result = json.loads(output)
+        self.assertEqual(result["source_only"][0]["flag"], "source_only")
+        self.assertEqual(result["target_only"][0]["flag"], "target_only")
+        self.assertEqual(result["changed"][0]["flag"], "checkout")
+        self.assertEqual(result["unchanged_count"], 1)
+
+    def test_environment_diff_refuses_same_key(self):
+        key = "same-environment-key"
+        with patch.dict(os.environ, {
+            "FLAGSMITH_SOURCE_ENVIRONMENT_KEY": key,
+            "FLAGSMITH_TARGET_ENVIRONMENT_KEY": key,
+        }), patch.object(cli, "run_provider") as provider, patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            self.assertEqual(cli.main(["diff", "staging", "staging-copy"]), 2)
+        provider.assert_not_called()
+        self.assertNotIn(key, stderr.getvalue())
+
+    def test_environment_diff_requires_private_keys_in_noninteractive_mode(self):
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("FLAGSMITH_SOURCE_ENVIRONMENT_KEY", None)
+            os.environ.pop("FLAGSMITH_TARGET_ENVIRONMENT_KEY", None)
+            with patch("sys.stdin.isatty", return_value=False), patch("sys.stderr", new_callable=io.StringIO) as stderr:
+                self.assertEqual(cli.main(["diff", "staging", "production", "--no-input"]), 3)
+        self.assertIn("FLAGSMITH_SOURCE_ENVIRONMENT_KEY", stderr.getvalue())
+
+    def test_provider_error_redacts_environment_key(self):
+        key = "do-not-leak-environment-key"
+        failed = subprocess.CompletedProcess(["flagsmith"], 1, "", f"request failed for {key}")
+        with patch.object(cli, "provider_command", return_value=["flagsmith"]), patch.object(
+            cli.subprocess, "run", return_value=failed
+        ), patch.dict(os.environ, {}):
+            with self.assertRaises(cli.CliError) as error:
+                cli.run_provider(["flag", "list"], extra_env={"FLAGSMITH_ENVIRONMENT": key})
+        self.assertNotIn(key, str(error.exception))
 
 
 if __name__ == "__main__":

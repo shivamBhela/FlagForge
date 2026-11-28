@@ -8,11 +8,11 @@ Statuses mean: **PASS** directly tested; **PARTIAL** functionality or evidence i
 
 ## 1. Executive summary
 
-FlagForge has working dashboard/backend capabilities and a Python companion CLI that delegates supported Flagsmith operations to the official CLI. On 2026-11-28, the backend suite passed (35 tests), the CLI suite passed (8 tests), frontend lint/type passed, and headed Chromium passed the E2E workflow against the running Compose frontend and PostgreSQL-backed API (1 test, 14.8 seconds). The workflow covered invalid-form validation, registration/login, organization/project/environment creation, reload persistence, the 18-route sweep, synthetic Staging Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, mobile layout and logout/login. No browser page errors, HTTP 5xx, or unexpected failed network requests were observed (navigation cancellations are recorded separately). All ten long-running Compose services reported healthy, both migration jobs exited successfully, and Alembic is at `009_encrypt_webhook_secrets (head)`. Named volumes were preserved. A fresh login attempt to the local Flagsmith UI using the supplied account was rejected; no repeated attempts were made. Earlier isolated Staging synchronization and signed webhook evidence remains documented, but the latest provider session could not be authenticated. There is no deployment provider connected and no public URL. The project is not production-ready.
+FlagForge has working dashboard/backend capabilities and a Python companion CLI that delegates supported Flagsmith operations to the official CLI. On 2026-11-28, the backend suite passed (43 tests), the CLI suite passed (12 tests), frontend lint/type/build passed, and headed Chromium passed the E2E workflow against the running Compose frontend and PostgreSQL-backed API (1 test, 23.9 seconds). The workflow covered invalid-form validation, registration/login, organization/project/environment creation, reload persistence, the 18-route sweep, synthetic Staging Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, mobile layout and logout/login. No browser page errors, HTTP 5xx, or unexpected failed network requests were observed (navigation cancellations are recorded separately). All ten long-running Compose services reported healthy, both migration jobs exited successfully, and Alembic is at `009_encrypt_webhook_secrets (head)`. A missing backend `.dockerignore` was fixed; the backend build context dropped from 116.82 MB to 28.97 KB. Named volumes were preserved. Earlier local Flagsmith API/sync/webhook tests used the self-hosted instance; fresh live authentication and synchronization were not verified in this run. Chaos Lab is synthetic and demo telemetry is not customer traffic. There is no public deployment or URL. The project is not production-ready.
 
 ## Completion estimate
 
-**70.8% against the 24-item acceptance checklist.** Method: each item is equally weighted; PASS = 1 point, PARTIAL = 0.5, and BLOCKED or NOT IMPLEMENTED = 0. Current count: 15 PASS, 4 PARTIAL, 1 NOT IMPLEMENTED, 4 BLOCKED (17/24 points). This measures checklist delivery only; it is not a production-readiness score.
+**75% against the 24-item acceptance checklist.** Method: each item is equally weighted; PASS = 1 point, PARTIAL = 0.5, and BLOCKED or NOT IMPLEMENTED = 0. Current estimate: 16 PASS, 4 PARTIAL, 0 NOT IMPLEMENTED, 4 BLOCKED (18/24 points). This measures checklist delivery only; it is not a production-readiness score.
 
 ## 2. What was already present
 
@@ -28,16 +28,18 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 - **PASS:** Added a worker recovery script covering queued-job recovery, graceful termination, heartbeat removal, and restart health.
 - **PASS:** Reduced the default Flagsmith web worker count to one for constrained local Docker hosts, with `FLAGSMITH_GUNICORN_WORKERS` as an override; the running service reports one Gunicorn worker and is healthy.
 - **PASS:** Added a companion CLI package and documentation, preserving the existing dashboard/backend.
+- **PASS:** Added a backend `.dockerignore` after a rebuild showed the Windows test virtual environment was included in the Linux container context; the context fell from 116.82 MB to 28.97 KB.
+- **PASS:** Extracted the documented risk-band boundary mapping and added tests at 0, 29.99, 30, 49.99, 50, 74.99, 75 and 100 without changing the existing risk formula.
 - **PASS:** Added `dashboard` and `observability` Compose profiles and a Core-default setup/health-check path for lower-memory local use. Static service matrix and PowerShell syntax validate; the current Full profile health check also passed.
 - **PASS:** Fixed the production-settings test fixture to isolate and provide its required test-only OTLP token; production requirements were not relaxed.
 
 ## 4. What was newly implemented
 
 - **PARTIAL:** `cli/flagforge_cli.py` adds local source scanning, GitHub archive scanning, evidence-only dependency output, provider flag listing/inspection/audit delegation, doctor/init commands, and report output.
-- **PASS:** Eight CLI unit tests cover Python AST references, comment-stripped JS/TS patterns, dynamic references, ignored files, archive traversal rejection, GitHub ZIP endpoint/host validation, and explicit cleanup-preview syntax.
+- **PASS:** Twelve CLI unit tests cover Python AST references, comment-stripped JS/TS patterns, dynamic references, ignored files, archive traversal rejection, GitHub ZIP endpoint/host validation, environment diff classification, duplicate/same-environment rejection, no-input handling, secret redaction, and explicit cleanup-preview syntax.
 - **PASS:** Fixed GitHub scanning to request a ZIP archive rather than a TAR archive and verified a public official Flagsmith JavaScript client scan (49 files, 13 literal/dynamic references); source code was not executed.
 - **PASS:** Added a small source-only Python/TypeScript sample and scanned it locally (2 files, 2 literal references with line evidence and 1 unknown dynamic reference).
-- **PARTIAL:** Named environment diff, authenticated telemetry display, automated cleanup patching, provider mutations, and CLI GitHub PR creation are not implemented in this companion CLI. The CLI states those limits rather than pretending to perform the operations.
+- **PARTIAL:** Named environment diff is now implemented as a read-only enabled/value comparison using the official CLI's documented environment-key variable. Unit tests mock the official CLI response; real key-based comparison still needs user-supplied Staging and target environment keys. Authenticated telemetry display, provider mutations and CLI GitHub PR creation remain unavailable in this companion CLI.
 
 ## 5. Official Flagsmith CLI integration approach and evidence
 
@@ -69,7 +71,7 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 
 - **PARTIAL:** CLI `dependencies` emits file-to-flag edges backed by source evidence and does not infer runtime edges.
 - **PASS:** CLI dependency graph emitted two source-backed edges for the local sample; the dashboard graph refresh was exercised in the latest headed browser run.
-- **NOT IMPLEMENTED:** Companion CLI `diff dev staging` currently returns an explicit unsupported error. Dashboard environment views exist, but current end-to-end parity for the named CLI workflow was not verified.
+- **PARTIAL:** Companion CLI `diff source target` now compares the official CLI's `flag list --json` output by stable flag name and enabled/value state. It prompts for environment keys with hidden input or accepts them from process environment; `--no-input` exits safely for automation. Classification and redaction tests use mocked provider responses; live comparison and broader `flagsmith flag list` JSON shapes remain unverified.
 
 ## 10. Risk engine and Release Guardian
 
@@ -93,16 +95,16 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 
 ## 13. Dashboard and backend status
 
-- **PASS (current Compose browser run):** Headed Chromium passed the E2E workflow against the Compose frontend and PostgreSQL-backed API in 14.8 seconds. Invalid form validation, registration/login, org/project/environment mutations, session reload, all 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian advisory output, incident empty states, cleanup draft preview, integration form validation and 390px layout passed. The test asserts no uncaught page errors, HTTP 5xx or unexpected failed requests (navigation cancellations are recorded). Screenshots are in ignored `frontend/test-results/`.
+- **PASS (current Compose browser run):** Headed Chromium passed the E2E workflow against the rebuilt Compose frontend and PostgreSQL-backed API in 23.9 seconds. Invalid form validation, registration/login, org/project/environment mutations, session reload, all 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian advisory output, incident empty states, cleanup draft preview, integration form validation and 390px layout passed. The test asserts no uncaught page errors, HTTP 5xx or unexpected failed requests (navigation cancellations are recorded). Screenshots are in ignored `frontend/test-results/`.
 - **PASS:** The earlier registration hang was retested against the actual Compose stack and did not recur.
 
 ## 14. Docker and deployment status
 
 - **PASS (prior verified run):** Compose configuration and migrations were previously verified; FlagForge Alembic head was `009_encrypt_webhook_secrets`, and Flagsmith migration containers exited successfully. Existing named volumes were preserved.
-- **PASS (current):** Docker Desktop Linux engine is running. Ten long-running services report healthy; `migrate` and `flagsmith-migrate-db` exited 0. Alembic current is `009_encrypt_webhook_secrets (head)`. `scripts/health-check.ps1 -Profile Full` passed all service and HTTP checks. `docker stats` measured about 1.15 GiB total across the ten running services against the 3.67 GiB Docker VM limit (point-in-time, not a load/soak measurement). Existing named volumes were preserved.
+- **PASS (current):** Docker Desktop Linux engine is running. Ten long-running services report healthy; `migrate` and `flagsmith-migrate-db` exited 0. Alembic current is `009_encrypt_webhook_secrets (head)`. `scripts/health-check.ps1 -Profile Full` passed all service and HTTP checks. `docker stats` measured about 0.98 GiB across ten running services against the 3.67 GiB Docker VM limit (point-in-time, not a load/soak measurement). Existing named volumes were preserved.
 - **PASS:** Compose defaults Flagsmith Gunicorn to one worker; the currently running Flagsmith service uses one worker and is healthy.
 - **PASS (static configuration):** Default/Core, Dashboard, Observability and Full Compose service selection validate; Core omits the web, Collector and demo-app services. Full profile runtime health is confirmed above.
-- **BLOCKED:** Public hosting is not deployed. No deployment provider CLI, connected provider tool, or provider credential was available. No public ingress was opened and no charges were incurred.
+- **BLOCKED:** Public hosting is not deployed. Render's free tier cannot host the persistent full Compose architecture; Oracle account eligibility/capacity requires sign-in in the existing Chrome profile. No public ingress was opened and no hosting charges were incurred.
 - **NOT VERIFIED:** Clean deployment after the latest configuration change, public ingress/TLS, restore-from-backup, HA, and production load.
 
 ## 15. Security and privacy status
@@ -117,13 +119,13 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Backend pytest | PASS (current) | `backend\.venv\Scripts\python.exe -m pytest -q`: 35 passed, one Starlette/httpx deprecation warning. The isolated local venv was installed from declared requirements. |
+| Backend pytest | PASS (current) | `backend\.venv\Scripts\python.exe -m pytest -q`: 43 passed, one Starlette/httpx deprecation warning. Includes eight risk-band boundary cases. |
 | Worker recovery | PASS (prior) | `scripts/test-worker-recovery.ps1`: queued `PENDING`, recovered `COMPLETED`, attempt count 1, graceful stop/heartbeat removal/restart health verified. |
-| Frontend ESLint | PASS (prior) | `npm run lint`: zero project findings. |
-| Frontend TypeScript | PASS (prior) | `npx tsc --noEmit`. |
-| Next production build | PASS (prior) | `npm run build`: 20 routes generated. |
-| npm audit | PASS (prior) | Both full and production-only audit reported zero known vulnerabilities. |
-| CLI unit tests | PASS (fresh) | `python -m unittest discover -s cli/tests -v`: 8 passed. |
+| Frontend ESLint | PASS (latest) | `npm run lint`: zero project findings. |
+| Frontend TypeScript | PASS (latest) | `npx tsc --noEmit`. |
+| Next production build | PASS (latest) | `npm run build`: 20 routes generated. |
+| npm audit | PASS (latest) | Both full and production-only audit reported zero known vulnerabilities. |
+| CLI unit tests | PASS (fresh, provider responses mocked for diff) | `python -m unittest discover -s cli/tests -v`: 12 passed. |
 | Local CLI scan | PASS (fresh) | `python cli/flagforge_cli.py scan examples/flagforge-feature-flag-sample`: 2 files; 2 literal refs with line evidence; 1 dynamic ref without a guessed key. |
 | Public GitHub scan | PASS (live read-only) | `python cli/flagforge_cli.py scan-repo https://github.com/Flagsmith/flagsmith-js-client.git`: 49 files scanned; 13 candidate references reported. Private repo auth not tested. |
 | Frontend ESLint | PASS (fresh) | `npm run lint`: exit code 0. |
@@ -131,7 +133,7 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 | Next production build | PASS (fresh) | `npm run build`: all 20 routes generated. |
 | CLI help | PASS (prior) | `python cli/flagforge_cli.py --help`. |
 | Official Flagsmith CLI | PASS | `npx --yes @flagsmith/cli@2.0.0 --help`; live local `evaluate` returned a response. |
-| Browser E2E | PASS (current Compose run) | `npm run test:e2e -- --headed`: 1 passed in 14.8s against Compose web/API/PostgreSQL, including invalid form validation, integration-form validation and unexpected-failed-request checks. Screenshots in ignored `frontend/test-results/`. |
+| Browser E2E | PASS (current Compose run) | `npm run test:e2e -- --headed`: 1 passed in 23.9s against Compose web/API/PostgreSQL, including invalid form validation, integration-form validation and unexpected-failed-request checks. Screenshots in ignored `frontend/test-results/`. |
 | Compose profile selection | PASS (static) | `docker compose config --quiet` plus service-list checks for default/Core, Dashboard, Observability and Full. Engine was not needed for config validation. |
 | Docker/migrations | PASS (current runtime) | Ten long-running services healthy; both one-shot migrations exited 0; Alembic `009_encrypt_webhook_secrets (head)`; Full profile HTTP checks passed. |
 | GitHub publication | PASS | Remote branch SHA matches local. PR #1 is an open draft against `main`; no merge. |
@@ -140,7 +142,7 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 
 1. Fresh local Flagsmith sign-in was rejected for the supplied account; provider discovery/sync/webhook must be rerun after credentials/account are confirmed.
 2. Public hosting is blocked on provider/account authorization; no public URL exists.
-3. CLI environment diff, authenticated telemetry queries, provider mutation workflow, and CLI GitHub PR creation are missing or partial.
+3. CLI live environment comparison, authenticated telemetry queries, provider mutation workflow, and CLI GitHub PR creation remain unverified or partial.
 4. Scanner coverage is pattern-limited and no recall benchmark exists.
 5. Remote rollback, live Chaos experiments, provider retries/outage scenarios, rate limiting, TLS/ingress, and disaster recovery remain incomplete/unverified.
 

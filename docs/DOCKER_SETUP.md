@@ -86,6 +86,24 @@ This stops only the current Compose project. It does not remove volumes or affec
 
 `docker compose down` removes this project's containers/network but retains named volumes by default. Do not use `docker compose down --volumes` unless intentionally deleting both application databases. Back up before any destructive operation.
 
+## Safe database backup and restore
+
+Back up both databases before upgrades or planned changes. These commands write custom-format dumps to a local `backups` directory; treat the files as sensitive because they contain application data. The commands do not print database passwords or remove volumes.
+
+```powershell
+New-Item -ItemType Directory -Force backups | Out-Null
+docker compose exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > backups/flagforge-postgres.dump
+if ($LASTEXITCODE -ne 0) { throw 'FlagForge database dump failed; do not proceed with an upgrade.' }
+docker compose exec -T flagsmith-postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > backups/flagsmith-postgres.dump
+if ($LASTEXITCODE -ne 0) { throw 'Flagsmith database dump failed; do not proceed with an upgrade.' }
+```
+
+Keep the two dumps separate and outside Git. A successful `pg_dump` exit code is required for each command. Store an additional copy in access-controlled storage before relying on it as disaster recovery.
+
+To verify a dump without overwriting the running databases, first create a separate, isolated Compose project with a distinct `COMPOSE_PROJECT_NAME` and its own `.env`/volumes. Start only its database service, create a new empty database in that isolated PostgreSQL instance, then restore the corresponding dump into that new database with `pg_restore --no-owner --dbname <new-database>`. Never restore over the live `flagforge` or `flagsmith` database as a test. Confirm the restored schema/data in the isolated project before considering the backup procedure verified. This repository's routine QA did not perform a restore drill.
+
+To restore a real deployment, stop application writers, take a fresh backup of the target, and restore each dump only into the explicitly selected target database under an approved maintenance procedure. Restore is destructive to the target database contents and must not be run against a shared or production database without a separate backup and authorization.
+
 ## Troubleshooting
 
 - **Engine unavailable:** Start Docker Desktop and wait for `docker info` to show Client and Server. Do not delete WSL distributions or Docker data as a workaround.

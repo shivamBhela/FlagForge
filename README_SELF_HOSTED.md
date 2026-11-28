@@ -49,10 +49,10 @@ See [FlagSmith setup](docs/FLAGSMITH_SETUP.md), [integration details](docs/INTEG
 
 The Compose project has seven FlagForge services (`web`, `api`, `worker`, `postgres`, `redis`, `otel-collector`, `demo-app`), three long-running Flagsmith services (`flagsmith`, `flagsmith-postgres`, `flagsmith-task-processor`), and two one-shot database migration jobs. Flagsmith has a separate PostgreSQL service and volume; it does not share FlagForge's schema or database.
 
-The current verified worker is a placeholder: it does not consume Redis jobs. The Collector has a health endpoint but its data is not wired into FlagForge's metric store. Chaos Lab runs synthetic simulations only; it does not change Flagsmith state. Release Guardian remote rollback and GitHub PR creation are unavailable (HTTP 501). See the [verification report](docs/FINAL_COMPETITION_READINESS_REPORT.md) for current evidence.
+The worker processes Redis Streams jobs for Flagsmith synchronization and repository scanning; other analyses are synchronous. Demo-app OTLP metrics flow through the Collector into FlagForge's authenticated telemetry store and Risk Engine. Chaos Lab runs synthetic simulations only and does not change Flagsmith state. Release Guardian rollback remains disabled and returns HTTP 501. Cleanup-to-GitHub PR workflow is implemented but has only mocked verification; the repository's own draft PR is a separate publication workflow. Prior local Flagsmith Staging sync and webhook tests passed, but live provider access was not reverified in the latest QA run. See the [end-to-end report](docs/END_TO_END_TEST_REPORT.md) and [readiness report](docs/FINAL_COMPETITION_READINESS_REPORT.md) for dated evidence.
 
 ## Lifecycle and data
 
 The named database volumes persist across `docker compose down` and `scripts/stop.ps1`. Do not use `docker compose down -v` unless intentionally deleting both local application databases and Redis data. The stop script only stops the services and retains volumes.
 
-Never commit `.env`, API keys, or generated local secrets. This Compose configuration is for local development/demo use; TLS, backups, resource hardening, and production operations are not configured.
+Never commit `.env`, API keys, or generated local secrets. This Compose configuration is for local development/demo use; TLS, high availability and production operations are not configured. A backup procedure and safe isolated restore-verification instructions are in [Docker setup](docs/DOCKER_SETUP.md); restore has not been drilled.
