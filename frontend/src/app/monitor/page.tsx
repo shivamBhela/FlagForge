@@ -33,7 +33,27 @@ export default function LiveMonitorPage() {
   };
 
   useEffect(() => {
-    loadMetrics();
+    if (!currentOrg) return;
+    let ignore = false;
+    const fetchMetrics = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const data = await api.telemetry.getMetrics(currentOrg.id, selectedFlag, selectedEnvironment);
+        if (!ignore) setMetrics(data);
+      } catch (loadError) {
+        if (!ignore) {
+          setMetrics(null);
+          setLoadError(loadError instanceof Error ? loadError.message : "Metrics could not be loaded.");
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    void fetchMetrics();
+    return () => {
+      ignore = true;
+    };
   }, [currentOrg, selectedFlag, selectedEnvironment]);
 
   return (

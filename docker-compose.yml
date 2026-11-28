@@ -13,6 +13,9 @@ x-flagsmith-env: &flagsmith-env
   DJANGO_SECRET_KEY: ${FLAGSMITH_DJANGO_SECRET_KEY:?Run setup.ps1 to create local secrets}
   WAREHOUSE_CREDENTIALS_SECRET: ${FLAGSMITH_WAREHOUSE_CREDENTIALS_SECRET:?Run setup.ps1 to create local secrets}
   TASK_RUN_METHOD: TASK_PROCESSOR
+  # A single web worker keeps the full development stack within small local
+  # Docker memory budgets. Override for larger hosts; upstream supports this.
+  GUNICORN_WORKERS: ${FLAGSMITH_GUNICORN_WORKERS:-1}
   PROMETHEUS_ENABLED: "true"
   EXPERIMENTATION_ENABLED: "true"
   ENABLE_TASK_PROCESSOR_HEALTH_CHECK: "true"
@@ -36,6 +39,7 @@ x-flagforge-env: &flagforge-env
 
 services:
   web:
+    profiles: ["dashboard"]
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -154,6 +158,7 @@ services:
       - flagforge-net
 
   otel-collector:
+    profiles: ["observability"]
     image: otel/opentelemetry-collector-contrib:0.100.0
     restart: unless-stopped
     environment:
@@ -174,6 +179,7 @@ services:
       - flagforge-net
 
   demo-app:
+    profiles: ["observability"]
     build:
       context: ./demo-app
       dockerfile: Dockerfile

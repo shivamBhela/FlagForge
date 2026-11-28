@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "./api";
 
 interface User {
@@ -34,6 +35,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
@@ -73,7 +75,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    loadUserData();
+    let ignore = false;
+    const restoreSession = async () => {
+      try {
+        const token = localStorage.getItem("ff_access_token");
+        if (!token) return;
+        const [profile, orgs] = await Promise.all([
+          api.auth.me(),
+          api.organizations.list(),
+        ]);
+        if (ignore) return;
+        setUser(profile);
+        setOrganizations(orgs);
+        const savedOrgId = localStorage.getItem("ff_current_org_id");
+        const matched = orgs.find((org) => org.id === savedOrgId);
+        const selectedOrg = matched ?? orgs[0] ?? null;
+        setCurrentOrg(selectedOrg);
+        if (selectedOrg && selectedOrg.id !== savedOrgId) {
+          localStorage.setItem("ff_current_org_id", selectedOrg.id);
+        }
+      } catch {
+        if (!ignore) {
+          localStorage.removeItem("ff_access_token");
+          localStorage.removeItem("ff_refresh_token");
+          setUser(null);
+          setOrganizations([]);
+          setCurrentOrg(null);
+        }
+      } finally {
+        if (!ignore) setIsLoading(false);
+      }
+    };
+    void restoreSession();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleSetCurrentOrg = (org: Organization) => {
@@ -100,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setOrganizations([]);
     setCurrentOrg(null);
-    window.location.href = "/login";
+    router.replace("/login");
   };
 
   const refreshOrganizations = async () => {

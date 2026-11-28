@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import {
@@ -23,27 +23,7 @@ export default function DependencyMapPage() {
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
 
-  const loadGraph = async () => {
-    if (!currentOrg) return;
-    setLoading(true);
-    try {
-      const data = await api.dependencies.getGraph(currentOrg.id);
-      setGraphData(data);
-      if (data.nodes.length > 0 && !selectedNode) {
-        handleSelectNode(data.nodes[0]);
-      }
-    } catch (e) {
-      // Ignore
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadGraph();
-  }, [currentOrg]);
-
-  const handleSelectNode = async (node: any) => {
+  const handleSelectNode = useCallback(async (node: any) => {
     setSelectedNode(node);
     if (!currentOrg) return;
     if (node.type === "FLAG") {
@@ -59,7 +39,47 @@ export default function DependencyMapPage() {
     } else {
       setBlastRadius(null);
     }
+  }, [currentOrg]);
+
+  const loadGraph = async () => {
+    if (!currentOrg) return;
+    setLoading(true);
+    try {
+      const data = await api.dependencies.getGraph(currentOrg.id);
+      setGraphData(data);
+      if (data.nodes.length > 0 && !selectedNode) {
+        await handleSelectNode(data.nodes[0]);
+      }
+    } catch (e) {
+      // Ignore
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    if (!currentOrg) return;
+    let ignore = false;
+    const fetchGraph = async () => {
+      setLoading(true);
+      try {
+        const data = await api.dependencies.getGraph(currentOrg.id);
+        if (ignore) return;
+        setGraphData(data);
+        if (data.nodes.length > 0) {
+          await handleSelectNode(data.nodes[0]);
+        }
+      } catch {
+        // Preserve the last successful graph if refresh fails.
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    void fetchGraph();
+    return () => {
+      ignore = true;
+    };
+  }, [currentOrg, handleSelectNode]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">

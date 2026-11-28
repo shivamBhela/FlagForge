@@ -32,7 +32,24 @@ export default function ReleaseGuardianPage() {
   };
 
   useEffect(() => {
-    loadData();
+    if (!currentOrg) return;
+    let ignore = false;
+    const fetchData = async () => {
+      try {
+        const pol = await api.guardian.getPolicy(currentOrg.id);
+        const risk = await api.guardian.evaluateRisk(currentOrg.id, selectedFlag);
+        if (!ignore) {
+          setPolicy(pol);
+          setRiskAssessment(risk);
+        }
+      } catch {
+        // Keep the last successful assessment visible when a refresh fails.
+      }
+    };
+    void fetchData();
+    return () => {
+      ignore = true;
+    };
   }, [currentOrg, selectedFlag]);
 
   return (

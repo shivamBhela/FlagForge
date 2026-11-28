@@ -56,3 +56,73 @@ def test_user_registration_and_login(client):
     res_logout = client.post("/api/v1/auth/logout", headers=headers_new)
     assert res_logout.status_code == 200
     assert res_logout.json()["status"] == "ok"
+
+
+def test_login_rate_limit_rejects_repeated_bad_passwords(client):
+    payload = {
+        "email": "throttled.user@flagforge.io",
+        "password": "Password123!",
+        "full_name": "Throttled User",
+    }
+    assert client.post("/api/v1/auth/register", json=payload).status_code == 201
+
+    for _ in range(8):
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": payload["email"], "password": "incorrect"},
+        )
+        assert response.status_code == 401
+
+    limited = client.post(
+        "/api/v1/auth/login",
+        json={"email": payload["email"], "password": "incorrect"},
+    )
+    assert limited.status_code == 429
+    assert int(limited.headers["Retry-After"]) > 0
+    assert payload["email"] not in limited.text
+
+
+def test_login_fails_closed_when_rate_limit_store_is_unavailable(client, monkeypatch):
+    from redis.exceptions import RedisError
+    from app.core.login_rate_limit import get_login_rate_limit_redis
+
+    class UnavailableRedis:
+        async def eval(self, *_args):
+            raise RedisError("connection refused")
+
+    async def override_redis():
+        yield UnavailableRedis()
+
+    monkeypatch.setitem(client.app.dependency_overrides, get_login_rate_limit_redis, override_redis)
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "user@flagforge.io", "password": "not-a-secret"},
+    )
+    assert response.status_code == 503
+    assert "temporarily unavailable" in response.json()["detail"]
+
+
+def test_successful_login_clears_account_failure_counter(client):
+    payload = {
+        "email": "reset.counter@flagforge.io",
+        "password": "Password123!",
+        "full_name": "Reset Counter",
+    }
+    assert client.post("/api/v1/auth/register", json=payload).status_code == 201
+
+    for _ in range(7):
+        assert client.post(
+            "/api/v1/auth/login",
+            json={"email": payload["email"], "password": "incorrect"},
+        ).status_code == 401
+
+    assert client.post(
+        "/api/v1/auth/login",
+        json={"email": payload["email"], "password": payload["password"]},
+    ).status_code == 200
+
+    for _ in range(8):
+        assert client.post(
+            "/api/v1/auth/login",
+            json={"email": payload["email"], "password": "incorrect"},
+        ).status_code == 401

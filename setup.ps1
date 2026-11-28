@@ -1,3 +1,8 @@
+param(
+    [ValidateSet("Core", "Dashboard", "Observability", "Full")]
+    [string]$Profile = "Core"
+)
+
 $ErrorActionPreference = "Stop"
 Set-Location -LiteralPath $PSScriptRoot
 
@@ -90,14 +95,16 @@ function Get-ConfiguredPort([string]$Name, [int]$Default) {
 }
 
 $ports = @(
-    (Get-ConfiguredPort "WEB_PORT" 3000),
     (Get-ConfiguredPort "API_PORT" 8000),
-    (Get-ConfiguredPort "DEMO_APP_PORT" 8080),
     (Get-ConfiguredPort "FLAGSMITH_PORT" 8081),
     (Get-ConfiguredPort "POSTGRES_PORT" 5433),
-    (Get-ConfiguredPort "REDIS_PORT" 6380),
-    13133, 4317, 4318, 8889
+    (Get-ConfiguredPort "REDIS_PORT" 6380)
 )
+if ($Profile -in @("Dashboard", "Full")) { $ports += Get-ConfiguredPort "WEB_PORT" 3000 }
+if ($Profile -in @("Observability", "Full")) {
+    $ports += Get-ConfiguredPort "DEMO_APP_PORT" 8080
+    $ports += @(13133, 4317, 4318, 8889)
+}
 $listeners = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
     Where-Object { $ports -contains $_.LocalPort } |
     Select-Object -ExpandProperty LocalPort -Unique
@@ -108,13 +115,21 @@ if ($listeners) {
 docker compose config --quiet
 if ($LASTEXITCODE -ne 0) { throw "Docker Compose configuration is invalid. Review .env and docker-compose.yml." }
 
-docker compose up --build -d
+if ($Profile -eq "Core") {
+    docker compose up --build -d
+} elseif ($Profile -eq "Dashboard") {
+    docker compose --profile dashboard up --build -d
+} elseif ($Profile -eq "Observability") {
+    docker compose --profile observability up --build -d
+} else {
+    docker compose --profile dashboard --profile observability up --build -d
+}
 if ($LASTEXITCODE -ne 0) { throw "Docker Compose startup failed. Inspect 'docker compose ps -a' and service logs; existing data was not removed." }
 
-& (Join-Path $PSScriptRoot "scripts\health-check.ps1")
+& (Join-Path $PSScriptRoot "scripts\health-check.ps1") -Profile $Profile
 if ($LASTEXITCODE -ne 0) { throw "The stack started but did not pass all health checks. See the service evidence printed above." }
 
 Write-Host "Flagsmith: http://localhost:8081"
-Write-Host "FlagForge: http://localhost:3000"
+if ($Profile -in @("Dashboard", "Full")) { Write-Host "FlagForge: http://localhost:3000" }
 Write-Host "FlagForge API docs: http://localhost:8000/api/v1/docs"
-Write-Host "Demo application: http://localhost:8080"
+if ($Profile -in @("Observability", "Full")) { Write-Host "Demo application: http://localhost:8080" }

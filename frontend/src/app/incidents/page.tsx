@@ -42,7 +42,31 @@ export default function IncidentsPage() {
   };
 
   useEffect(() => {
-    loadData();
+    if (!currentOrg) return;
+    let ignore = false;
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [incidentList, actionList] = await Promise.all([
+          api.incidents.listIncidents(currentOrg.id),
+          api.incidents.listRollbackActions(currentOrg.id),
+        ]);
+        if (ignore) return;
+        setIncidents(incidentList);
+        setActions(actionList);
+        setExplanation(incidentList.length > 0
+          ? await api.incidents.explain(currentOrg.id, incidentList[0].flag_key)
+          : null);
+      } catch {
+        // Keep the last successful history visible when a refresh fails.
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    void fetchData();
+    return () => {
+      ignore = true;
+    };
   }, [currentOrg]);
 
   return (

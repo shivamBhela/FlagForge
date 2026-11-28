@@ -19,10 +19,19 @@ test('registers, persists, navigates, validates integrations, and runs synthetic
 
   const unique = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   const email = `flagforge.qa.${unique}@example.com`;
+  const password = `FfQa!${unique.slice(-8)}bZ#`;
   await page.goto('/register');
   await page.getByPlaceholder('Alex Rivera').fill('FlagForge QA Runner');
-  await page.getByPlaceholder('alex@company.com').fill(email);
-  await page.getByPlaceholder('At least 8 characters').fill('FfQa!7rB9z#2Lx');
+  const emailField = page.getByPlaceholder('alex@company.com');
+  await emailField.fill('not-an-email');
+  await page.getByPlaceholder('At least 8 characters').fill('short');
+  await page.getByRole('button', { name: 'Get Started' }).click();
+  await expect(page).toHaveURL(/\/register$/);
+  expect(await emailField.evaluate((element: HTMLInputElement) => element.validity.valid)).toBe(false);
+
+  await page.getByPlaceholder('Alex Rivera').fill('FlagForge QA Runner');
+  await emailField.fill(email);
+  await page.getByPlaceholder('At least 8 characters').fill(password);
   await page.getByRole('button', { name: 'Get Started' }).click();
   await expect(page).toHaveURL(/\/organizations\/new$/);
   await page.getByPlaceholder('Acme Global Inc').fill(`FlagForge QA ${unique}`);
@@ -35,7 +44,7 @@ test('registers, persists, navigates, validates integrations, and runs synthetic
   await page.getByPlaceholder('e.g. Core Commerce Storefront').fill(`QA Project ${unique}`);
   await page.getByPlaceholder('e.g. core-commerce-storefront').fill(`qa-project-${unique.replace(/[^a-z0-9-]/gi, '-')}`);
   await page.getByRole('button', { name: 'Create Project' }).click();
-  await expect(page).toHaveURL(/\/projects\/[^/]+$/);
+  await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}$/i, { timeout: 15000 });
   await expect(page.getByRole('heading', { name: new RegExp(`QA Project ${unique}`) })).toBeVisible();
   await expect(page.getByText('Production', { exact: true })).toBeVisible();
   await page.getByPlaceholder('e.g. QA Sandbox').fill(`Isolated QA ${unique}`);
@@ -69,7 +78,7 @@ test('registers, persists, navigates, validates integrations, and runs synthetic
   // authenticated QA session before exercising protected workflows again.
   await page.goto('/login');
   await page.getByPlaceholder('alex@company.com').fill(email);
-  await page.getByPlaceholder('••••••••••••').fill('FfQa!7rB9z#2Lx');
+  await page.getByPlaceholder('••••••••••••').fill(password);
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page).toHaveURL(/\/projects$/);
 
@@ -90,10 +99,39 @@ test('registers, persists, navigates, validates integrations, and runs synthetic
   const scannerSearch = page.getByPlaceholder('Search by flag key or file...');
   await scannerSearch.fill(`no-such-reference-${unique}`);
   await expect(page.getByText('No code references discovered yet. Click "Run AST Scan" to analyze your repository.')).toBeVisible();
+  await scannerSearch.fill('checkout_v2_redesign');
+  await expect(page.getByText('checkout_v2_redesign', { exact: true }).first()).toBeVisible();
+
+  await page.goto('/dependencies');
+  await page.getByRole('button', { name: 'Refresh Map' }).click();
+  await expect(page.locator('main')).toContainText(/Topology Graph/i);
+
+  await page.goto('/monitor');
+  await page.locator('select').selectOption({ label: 'Staging' });
+  await page.getByRole('button', { name: 'Refresh Metrics' }).click();
+  await expect(page.locator('main')).toContainText('No telemetry received');
+
+  await page.goto('/guardian');
+  await expect(page.locator('main')).toContainText('MANUAL_APPROVAL_REQUIRED');
+  await expect(page.locator('main')).toContainText('Rollback unavailable');
+  await expect(page.locator('main')).toContainText('No remote flag change will be attempted');
+
+  await page.goto('/incidents');
+  await expect(page.locator('main')).toContainText('No active incidents recorded');
+  await expect(page.locator('main')).toContainText('No rollback actions executed');
+
+  await page.goto('/cleanup');
+  await page.getByRole('button', { name: 'Load actual source for review' }).first().click();
+  await expect(page.locator('main')).toContainText('Connect GitHub and select an authorized repository');
+  await expect(page.locator('main')).toContainText('No repository diff prepared');
 
   await page.goto('/integrations');
   await expect(page.getByText(/GitHub/i).first()).toBeVisible();
   await expect(page.getByText(/not configured|connect GitHub/i).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Add Flagsmith Connection' }).click();
+  await page.getByRole('button', { name: 'Test Connection' }).click();
+  await expect(page.getByText('Please provide API URL and Management Token to test.')).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel' }).click();
   await page.screenshot({ path: 'test-results/integrations-desktop.png', fullPage: true });
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -106,13 +144,15 @@ test('registers, persists, navigates, validates integrations, and runs synthetic
   await page.getByRole('button', { name: /sign out/i }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.getByPlaceholder('alex@company.com').fill(email);
-  await page.getByPlaceholder('••••••••••••').fill('FfQa!7rB9z#2Lx');
+  await page.getByPlaceholder('••••••••••••').fill(password);
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page).toHaveURL(/\/projects$/);
   await expect(page.getByText(`FlagForge QA ${unique}`, { exact: true }).first()).toBeVisible();
 
   expect(pageErrors, 'uncaught JavaScript errors').toEqual([]);
   expect(serverErrors, 'HTTP 5xx responses').toEqual([]);
-  // Resource/cancellation noise is captured for artifacts; only server failures and page errors fail the suite.
+  const unexpectedFailedRequests = failedRequests.filter(request => !request.includes('ERR_ABORTED'));
+  expect(unexpectedFailedRequests, 'unexpected failed network requests').toEqual([]);
+  // Route-change cancellations are expected; unexpected failed requests fail the suite.
   test.info().annotations.push({ type: 'failed requests', description: JSON.stringify(failedRequests) });
 });

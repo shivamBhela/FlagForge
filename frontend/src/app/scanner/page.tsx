@@ -52,7 +52,33 @@ export default function CodeScannerPage() {
   };
 
   useEffect(() => {
-    loadData();
+    if (!currentOrg) return;
+    let ignore = false;
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [repos, scanList, refs] = await Promise.all([
+          api.scanner.listRepositories(currentOrg.id),
+          api.scanner.listScans(currentOrg.id),
+          api.scanner.listReferences(currentOrg.id),
+        ]);
+        if (ignore) return;
+        setRepositories(repos);
+        setScans(scanList);
+        setReferences(refs);
+        if (repos.length > 0) {
+          setSelectedRepo((previousRepo) => previousRepo || repos[0].id);
+        }
+      } catch (loadError: any) {
+        if (!ignore) setError(loadError.message || "Failed to load scanner data.");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    void fetchData();
+    return () => {
+      ignore = true;
+    };
   }, [currentOrg]);
 
   const handleTriggerScan = async () => {
@@ -165,7 +191,7 @@ export default function CodeScannerPage() {
 
         {filteredReferences.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-xs">
-            No code references discovered yet. Click "Run AST Scan" to analyze your repository.
+            No code references discovered yet. Click &quot;Run AST Scan&quot; to analyze your repository.
           </div>
         ) : (
           <div className="divide-y divide-[#1e293b] overflow-x-auto">

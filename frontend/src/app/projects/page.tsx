@@ -30,11 +30,31 @@ export default function ProjectsPage() {
   };
 
   useEffect(() => {
-    if (currentOrg) {
-      loadProjects();
-    } else {
-      setLoading(false);
+    let ignore = false;
+    if (!currentOrg) {
+      void Promise.resolve().then(() => {
+        if (!ignore) setLoading(false);
+      });
+      return () => {
+        ignore = true;
+      };
     }
+    const fetchProjects = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const projectList = await api.projects.list(currentOrg.id);
+        if (!ignore) setProjects(projectList);
+      } catch (loadError: any) {
+        if (!ignore) setError(loadError.message || "Failed to load projects.");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    void fetchProjects();
+    return () => {
+      ignore = true;
+    };
   }, [currentOrg]);
 
   if (authLoading || loading) {

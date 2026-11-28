@@ -33,7 +33,41 @@ export default function CleanupStudioPage() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { void loadData(); }, [currentOrg]);
+  useEffect(() => {
+    let ignore = false;
+    if (!currentOrg) {
+      void Promise.resolve().then(() => {
+        if (!ignore) setLoading(false);
+      });
+      return () => {
+        ignore = true;
+      };
+    }
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [stale, patchList, githubState] = await Promise.all([
+          api.cleanup.getStaleFlags(currentOrg.id),
+          api.cleanup.listPatches(currentOrg.id),
+          api.github.getConnection(currentOrg.id),
+        ]);
+        if (!ignore) {
+          setStaleFlags(stale);
+          setPatches(patchList);
+          setGithub(githubState);
+          setError("");
+        }
+      } catch (loadError: any) {
+        if (!ignore) setError(loadError.message || "Could not load cleanup data.");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    void fetchData();
+    return () => {
+      ignore = true;
+    };
+  }, [currentOrg]);
 
   const handleGeneratePatch = async (flagKey: string, filePath: string) => {
     if (!currentOrg) return;

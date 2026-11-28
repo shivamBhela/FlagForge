@@ -46,7 +46,31 @@ export default function ProjectDetailsPage() {
   };
 
   useEffect(() => {
-    loadProject();
+    let ignore = false;
+    if (!currentOrg || !projectId) {
+      void Promise.resolve().then(() => {
+        if (!ignore) setLoading(false);
+      });
+      return () => {
+        ignore = true;
+      };
+    }
+    const fetchProject = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await api.projects.get(currentOrg.id, projectId);
+        if (!ignore) setProject(data);
+      } catch (loadError: any) {
+        if (!ignore) setError(loadError.message || "Failed to load project details.");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    void fetchProject();
+    return () => {
+      ignore = true;
+    };
   }, [currentOrg, projectId]);
 
   const handleAddEnvironment = async (e: React.FormEvent) => {

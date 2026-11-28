@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flagforge-cli"
+version = "0.1.0"
+description = "A FlagForge companion CLI that extends the official Flagsmith CLI workflow"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "FlagForge Project Team" }]
+dependencies = []
+
+[project.scripts]
+flagforge = "flagforge_cli:main"
+
+[tool.setuptools]
+py-modules = ["flagforge_cli"]

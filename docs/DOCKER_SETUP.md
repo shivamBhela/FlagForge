@@ -4,7 +4,7 @@
 
 - Docker Desktop with Linux containers and Docker Compose v2.
 - Windows x64 and PowerShell 7 for `setup.ps1`.
-- At least 4 GB memory allocated to Docker.
+- At least 4 GB memory allocated to Docker for the Dashboard profile. On an 8 GB PC with a smaller Docker VM limit, use Core first; the prior full-stack run approached 3.58 GB.
 - Available localhost ports: 3000, 8000, 8080, 8081, 13133, 4317, 4318, 8889, 5433 and 6380.
 
 Setup reads configured host ports from `.env`, detects collisions on those ports, and leaves existing listeners alone. FlagForge Redis maps to host port 6380 because other local projects often bind 6379. The setup defaults are 3000, 8000, 8080, 8081, 5433 and 6380; Collector ports are fixed at 13133, 4317, 4318 and 8889.
@@ -14,8 +14,19 @@ The Compose project name defaults to `flagforge`. Compose scopes generated conta
 ## Start
 
 ```powershell
-.\setup.ps1
+.\setup.ps1 -Profile Dashboard
 ```
+
+Available profiles:
+
+| Command | Services added to the core |
+| --- | --- |
+| `./setup.ps1 -Profile Core` | API, worker, PostgreSQL, Redis and self-hosted Flagsmith only |
+| `./setup.ps1 -Profile Dashboard` | Core plus Next.js frontend |
+| `./setup.ps1 -Profile Observability` | Core plus OpenTelemetry Collector and demo app |
+| `./setup.ps1 -Profile Full` | Core plus frontend, Collector and demo app |
+
+Compose services in optional profiles remain available; omitting a profile does not remove their images, containers, or data. `setup.ps1` defaults to Core. From a running Core stack, add the dashboard with `docker compose --profile dashboard up --build -d web`, or add telemetry with `docker compose --profile observability up --build -d otel-collector demo-app`.
 
 The script creates `.env` only when it is absent, generates local secrets without printing them, validates Compose quietly, runs `docker compose up --build -d`, then waits on health checks. An existing `.env` is not overwritten.
 
@@ -23,9 +34,9 @@ Manual operations:
 
 ```powershell
 docker compose config --quiet
-docker compose up --build -d
+docker compose --profile dashboard up --build -d
 docker compose ps --all
-\.\scripts\health-check.ps1
+.\scripts\health-check.ps1 -Profile Dashboard
 ```
 
 ## Service and port inventory
@@ -74,6 +85,24 @@ docker compose ps --all migrate flagsmith-migrate-db
 This stops only the current Compose project. It does not remove volumes or affect unrelated containers. Restart with `docker compose up -d`.
 
 `docker compose down` removes this project's containers/network but retains named volumes by default. Do not use `docker compose down --volumes` unless intentionally deleting both application databases. Back up before any destructive operation.
+
+## Safe database backup and restore
+
+Back up both databases before upgrades or planned changes. These commands write custom-format dumps to a local `backups` directory; treat the files as sensitive because they contain application data. The commands do not print database passwords or remove volumes.
+
+```powershell
+New-Item -ItemType Directory -Force backups | Out-Null
+docker compose exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > backups/flagforge-postgres.dump
+if ($LASTEXITCODE -ne 0) { throw 'FlagForge database dump failed; do not proceed with an upgrade.' }
+docker compose exec -T flagsmith-postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > backups/flagsmith-postgres.dump
+if ($LASTEXITCODE -ne 0) { throw 'Flagsmith database dump failed; do not proceed with an upgrade.' }
+```
+
+Keep the two dumps separate and outside Git. A successful `pg_dump` exit code is required for each command. Store an additional copy in access-controlled storage before relying on it as disaster recovery.
+
+To verify a dump without overwriting the running databases, first create a separate, isolated Compose project with a distinct `COMPOSE_PROJECT_NAME` and its own `.env`/volumes. Start only its database service, create a new empty database in that isolated PostgreSQL instance, then restore the corresponding dump into that new database with `pg_restore --no-owner --dbname <new-database>`. Never restore over the live `flagforge` or `flagsmith` database as a test. Confirm the restored schema/data in the isolated project before considering the backup procedure verified. On 2026-11-28, an isolated restore drill restored both FlagForge and Flagsmith PostgreSQL dumps into separate temporary PostgreSQL services using tmpfs storage and no host ports. FlagForge restored at Alembic revision 009_encrypt_webhook_secrets with 41 user rows; Flagsmith restored with 625 migration rows. A first harness attempt failed, and the corrected rerun passed. The normal project volumes were not mounted or changed. Redacted result logs are in the ignored local artifacts/evidence/docker/restore_drill_20261128_144218.log.
+
+To restore a real deployment, stop application writers, take a fresh backup of the target, and restore each dump only into the explicitly selected target database under an approved maintenance procedure. Restore is destructive to the target database contents and must not be run against a shared or production database without a separate backup and authorization.
 
 ## Troubleshooting
 

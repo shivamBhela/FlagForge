@@ -15,10 +15,12 @@ import {
   Flag,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 
 export default function OverviewPage() {
+  const router = useRouter();
   const { currentOrg } = useAuth();
   const [flags, setFlags] = useState<any[]>([]);
   const [connections, setConnections] = useState<any[]>([]);
@@ -40,15 +42,32 @@ export default function OverviewPage() {
   };
 
   useEffect(() => {
-    if (currentOrg) {
-      loadData();
-    }
+    if (!currentOrg) return;
+    let ignore = false;
+    const fetchData = async () => {
+      try {
+        const [connectionList, flagList] = await Promise.all([
+          api.flagsmith.listConnections(currentOrg.id).catch(() => []),
+          api.flagsmith.listFlags(currentOrg.id, { limit: 10 }).catch(() => []),
+        ]);
+        if (!ignore) {
+          setConnections(connectionList);
+          setFlags(flagList);
+        }
+      } catch {
+        // Ignore background errors.
+      }
+    };
+    void fetchData();
+    return () => {
+      ignore = true;
+    };
   }, [currentOrg]);
 
   const handleSync = async () => {
     if (!currentOrg) return;
     if (connections.length === 0) {
-      window.location.href = "/integrations";
+      router.push("/integrations");
       return;
     }
     setSyncing(true);

@@ -1,4 +1,7 @@
 import pytest
+import asyncio
+import uuid
+from datetime import datetime, timedelta, timezone
 
 
 def test_chaos_lab_telemetry_guardian_and_cleanup(client):
@@ -88,6 +91,56 @@ def test_chaos_lab_telemetry_guardian_and_cleanup(client):
     assert no_telemetry["error_anomaly_score"] == 100.0
     assert no_telemetry["latency_anomaly_score"] == 100.0
     assert no_telemetry["recommended_action"] == "MANUAL_APPROVAL_REQUIRED"
+
+    # Sufficient telemetry can still identify a critical release, but the
+    # recommendation must never claim that the unavailable remote rollback ran.
+    policy = client.put(
+        f"/api/v1/organizations/{org_id}/policy",
+        json={
+            "weight_dependency_impact": 0.0,
+            "weight_error_anomaly": 0.6,
+            "weight_latency_anomaly": 0.4,
+            "weight_change_criticality": 0.0,
+            "weight_rollout_velocity": 0.0,
+            "min_telemetry_samples": 10,
+        },
+        headers=headers,
+    )
+    assert policy.status_code == 200
+    from conftest import TestingSessionLocal
+    from app.models.telemetry import TelemetryAggregate
+
+    async def record_critical_telemetry():
+        async with TestingSessionLocal() as session:
+            now = datetime.now(timezone.utc)
+            session.add(TelemetryAggregate(
+                organization_id=uuid.UUID(org_id),
+                service_name="qa-risk-test",
+                environment_name="production",
+                feature_flag_key="critical_qa_flag",
+                window_start=now - timedelta(minutes=5),
+                window_end=now,
+                request_count=100,
+                error_count=100,
+                error_rate=1.0,
+                p50_ms=500.0,
+                p95_ms=500.0,
+                p99_ms=500.0,
+                latency_bucket_bounds=[10.0, 100.0, 500.0],
+                latency_bucket_counts=[0, 0, 100, 0],
+            ))
+            await session.commit()
+
+    asyncio.run(record_critical_telemetry())
+    critical = client.post(
+        f"/api/v1/organizations/{org_id}/guardian/evaluate?flag_key=critical_qa_flag&environment_name=production",
+        headers=headers,
+    )
+    assert critical.status_code == 200
+    assert critical.json()["risk_band"] == "CRITICAL"
+    assert critical.json()["factors"]["telemetry_confidence"] == "SUFFICIENT"
+    assert critical.json()["factors"]["rollback_available"] is False
+    assert critical.json()["recommended_action"] == "MANUAL_APPROVAL_REQUIRED"
 
     # 6. Release Guardian Rollback
     res_rb = client.post(
