@@ -8,7 +8,7 @@ Statuses mean: **PASS** directly tested; **PARTIAL** functionality or evidence i
 
 ## 1. Executive summary
 
-FlagForge has working dashboard/backend capabilities and a Python companion CLI that delegates supported Flagsmith operations to the official CLI. On 2026-11-28, the backend suite passed (43 tests), the CLI suite passed (12 tests), frontend lint/type/build passed, and headed Chromium passed the E2E workflow against the running Compose frontend and PostgreSQL-backed API (1 test, 23.9 seconds). The workflow covered invalid-form validation, registration/login, organization/project/environment creation, reload persistence, the 18-route sweep, synthetic Staging Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, mobile layout and logout/login. No browser page errors, HTTP 5xx, or unexpected failed network requests were observed (navigation cancellations are recorded separately). All ten long-running Compose services reported healthy, both migration jobs exited successfully, and Alembic is at `009_encrypt_webhook_secrets (head)`. A missing backend `.dockerignore` was fixed; the backend build context dropped from 116.82 MB to 28.97 KB. Named volumes were preserved. Earlier local Flagsmith API/sync/webhook tests used the self-hosted instance; fresh live authentication and synchronization were not verified in this run. Chaos Lab is synthetic and demo telemetry is not customer traffic. There is no public deployment or URL. The project is not production-ready.
+FlagForge has working dashboard/backend capabilities and a Python companion CLI that delegates supported Flagsmith operations to the official CLI. On 2026-11-28, the backend suite passed (46 tests), the CLI suite passed (12 tests), frontend lint/type/build passed, and headed Chromium passed the E2E workflow against the running Compose frontend and PostgreSQL-backed API (1 test, 22.3 seconds). The workflow covered invalid-form validation, registration/login, organization/project/environment creation, reload persistence, the 18-route sweep, synthetic Staging Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, mobile layout and logout/login. No browser page errors, HTTP 5xx, or unexpected failed network requests were observed (navigation cancellations are recorded separately). All ten long-running Compose services reported healthy, both migration jobs exited successfully, and Alembic is at `009_encrypt_webhook_secrets (head)`. Login throttling was verified in tests and against Docker Redis. A missing backend `.dockerignore` was fixed; the backend build context dropped from 116.82 MB to 28.97 KB. Named volumes were preserved. Earlier local Flagsmith API/sync/webhook tests used the self-hosted instance; fresh live authentication and synchronization were not verified in this run. Chaos Lab is synthetic and demo telemetry is not customer traffic. There is no public deployment or URL. The project is not production-ready.
 
 ## Completion estimate
 
@@ -95,7 +95,7 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 
 ## 13. Dashboard and backend status
 
-- **PASS (current Compose browser run):** Headed Chromium passed the E2E workflow against the rebuilt Compose frontend and PostgreSQL-backed API in 23.9 seconds. Invalid form validation, registration/login, org/project/environment mutations, session reload, all 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian advisory output, incident empty states, cleanup draft preview, integration form validation and 390px layout passed. The test asserts no uncaught page errors, HTTP 5xx or unexpected failed requests (navigation cancellations are recorded). Screenshots are in ignored `frontend/test-results/`.
+- **PASS (current Compose browser run):** Headed Chromium passed the E2E workflow against the rebuilt Compose frontend and PostgreSQL-backed API in 22.3 seconds. Invalid form validation, registration/login, org/project/environment mutations, session reload, all 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian advisory output, incident empty states, cleanup draft preview, integration form validation and 390px layout passed. The test asserts no uncaught page errors, HTTP 5xx or unexpected failed requests (navigation cancellations are recorded). Screenshots are in ignored `frontend/test-results/`.
 - **PASS:** The earlier registration hang was retested against the actual Compose stack and did not recur.
 
 ## 14. Docker and deployment status
@@ -104,14 +104,15 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 - **PASS (current):** Docker Desktop Linux engine is running. Ten long-running services report healthy; `migrate` and `flagsmith-migrate-db` exited 0. Alembic current is `009_encrypt_webhook_secrets (head)`. `scripts/health-check.ps1 -Profile Full` passed all service and HTTP checks. `docker stats` measured about 0.98 GiB across ten running services against the 3.67 GiB Docker VM limit (point-in-time, not a load/soak measurement). Existing named volumes were preserved.
 - **PASS:** Compose defaults Flagsmith Gunicorn to one worker; the currently running Flagsmith service uses one worker and is healthy.
 - **PASS (static configuration):** Default/Core, Dashboard, Observability and Full Compose service selection validate; Core omits the web, Collector and demo-app services. Full profile runtime health is confirmed above.
-- **BLOCKED:** Public hosting is not deployed. Render's free tier cannot host the persistent full Compose architecture; Oracle account eligibility/capacity requires sign-in in the existing Chrome profile. No public ingress was opened and no hosting charges were incurred.
+- **NOT DEPLOYED (by user direction):** Public hosting is paused while keeping the budget at ₹0. Render shows the Hobby workspace has no payment method and zero current usage, but its included bandwidth/pipeline overages can be billed and no $0 spend cap was verified. No Render resources were created; local Docker remains the complete demo.
 - **NOT VERIFIED:** Clean deployment after the latest configuration change, public ingress/TLS, restore-from-backup, HA, and production load.
 
 ## 15. Security and privacy status
 
 - **PASS (automated checks):** Earlier auth/RBAC/tenant, SSRF, cryptography, webhook, and config tests passed; npm audit reported zero known vulnerabilities.
 - **PASS:** CLI archive scanning enforces GitHub host/redirect validation, bounded downloads/extraction, path traversal checks, and does not execute repository content. Credentials are sourced from the process environment/official CLI config and are not printed by the report.
-- **PARTIAL:** Rate limiting, TLS/ingress, key rotation operations, backup restoration, HA, production hardening, and independent security review are incomplete or unverified.
+- **PASS:** Redis-backed login throttling is implemented per IP and account with a 15-minute window, hashed identifiers, `Retry-After`, and fail-closed behavior when Redis is unavailable. Automated tests cover lockout, recovery after successful login, and Redis outage. The rebuilt API was verified against real Compose Redis.
+- **PARTIAL:** TLS/ingress, key rotation operations, backup restoration, HA, production hardening, and independent security review are incomplete or unverified.
 - **PARTIAL:** Flagsmith startup logs emit an upstream Django-Axes warning that lockout parameters omit `ip_address`; this Compose configuration was not changed pending a supported upstream setting. The local stack is not publicly exposed.
 - **PASS:** No production Flagsmith flags were intentionally changed; the prior live webhook/synchronization checks were isolated to Staging and test flags.
 
@@ -119,7 +120,7 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Backend pytest | PASS (current) | `backend\.venv\Scripts\python.exe -m pytest -q`: 43 passed, one Starlette/httpx deprecation warning. Includes eight risk-band boundary cases. |
+| Backend pytest | PASS (current) | `backend\.venv\Scripts\python.exe -m pytest -q`: 46 passed, one Starlette/httpx deprecation warning. Includes eight risk-band boundary cases and three login rate-limit regressions. |
 | Worker recovery | PASS (prior) | `scripts/test-worker-recovery.ps1`: queued `PENDING`, recovered `COMPLETED`, attempt count 1, graceful stop/heartbeat removal/restart health verified. |
 | Frontend ESLint | PASS (latest) | `npm run lint`: zero project findings. |
 | Frontend TypeScript | PASS (latest) | `npx tsc --noEmit`. |
@@ -133,18 +134,20 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 | Next production build | PASS (fresh) | `npm run build`: all 20 routes generated. |
 | CLI help | PASS (prior) | `python cli/flagforge_cli.py --help`. |
 | Official Flagsmith CLI | PASS | `npx --yes @flagsmith/cli@2.0.0 --help`; live local `evaluate` returned a response. |
-| Browser E2E | PASS (current Compose run) | `npm run test:e2e -- --headed`: 1 passed in 23.9s against Compose web/API/PostgreSQL, including invalid form validation, integration-form validation and unexpected-failed-request checks. Screenshots in ignored `frontend/test-results/`. |
+| Browser E2E | PASS (current Compose run) | `npm run test:e2e -- --headed`: 1 passed in 22.3s after rebuilding the API, including invalid form validation, integration-form validation and unexpected-failed-request checks. Screenshots in ignored `frontend/test-results/`. |
+| Login throttling | PASS (unit + local integration) | Backend tests cover 429 lockout, counter clearing, and Redis outage. Against the rebuilt Docker API and real Redis, eight invalid requests returned 401 and the ninth returned 429 with `Retry-After`. |
 | Compose profile selection | PASS (static) | `docker compose config --quiet` plus service-list checks for default/Core, Dashboard, Observability and Full. Engine was not needed for config validation. |
 | Docker/migrations | PASS (current runtime) | Ten long-running services healthy; both one-shot migrations exited 0; Alembic `009_encrypt_webhook_secrets (head)`; Full profile HTTP checks passed. |
 | GitHub publication | PASS | Remote branch SHA matches local. PR #1 is an open draft against `main`; no merge. |
+| GitHub Actions CI | ADDED, NOT YET RUN | `.github/workflows/ci.yml` checks backend, CLI, frontend, audits and Compose config on pushes/PRs. No hosted run has been observed yet. |
 
 ## 17. Known issues and limitations
 
 1. Fresh local Flagsmith sign-in was rejected for the supplied account; provider discovery/sync/webhook must be rerun after credentials/account are confirmed.
-2. Public hosting is blocked on provider/account authorization; no public URL exists.
+2. Public hosting is paused by user direction while the strict ₹0 spending cap remains unverified; no public URL exists.
 3. CLI live environment comparison, authenticated telemetry queries, provider mutation workflow, and CLI GitHub PR creation remain unverified or partial.
 4. Scanner coverage is pattern-limited and no recall benchmark exists.
-5. Remote rollback, live Chaos experiments, provider retries/outage scenarios, rate limiting, TLS/ingress, and disaster recovery remain incomplete/unverified.
+5. Remote rollback, live Chaos experiments, provider retries/outage scenarios, TLS/ingress, and disaster recovery remain incomplete/unverified.
 
 ## 18. Competition demonstration instructions
 
@@ -172,6 +175,6 @@ flagforge report --format markdown
 1. Confirm the local Flagsmith account credentials, then rerun isolated Staging discovery/sync/change detection and webhook verification.
 2. Connect an authorized deployment provider/account; confirm plan and any cost before provisioning, then deploy and verify the full architecture.
 3. Implement or clearly defer the missing CLI workflows (`diff`, authenticated monitor context, safe PR preparation) and add command-level tests.
-4. Complete rate limiting, TLS/ingress, backup/restore, load, HA, and independent security review before any production use.
+4. Verify login throttling against the running Redis-backed API, then complete TLS/ingress, backup/restore, load, HA, and independent security review before any production use.
 
 **Evidence preservation:** Previous Playwright screenshots/traces remain under ignored `frontend/test-results/`; no credentials or generated sensitive test data should be committed. Existing Docker volumes were not removed.

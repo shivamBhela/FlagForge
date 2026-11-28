@@ -11,12 +11,12 @@ This report separates live local verification from mocked, synthetic and unavail
 
 - **Remote rollback is disabled for safety.** The pinned Flagsmith API accepts environment-scoped feature-state writes, but this deployment has not established a conditional-write/concurrency guarantee that would let FlagForge promise race-safe restoration after an incident. The Guardian endpoint returns HTTP 501 without mutating the provider. Risk evaluation remains advisory.
 - **Worker job coverage is limited.** Redis Streams handlers cover Flagsmith sync and repository scans. Dependency graph generation, telemetry aggregation, risk evaluation and cleanup analysis remain synchronous local operations.
-- **Request rate limiting is not implemented.** This leaves brute-force protection incomplete and should be addressed before shared or public deployment.
+- **Login rate limiting is implemented and locally verified.** It depends on Redis, fails closed when Redis is unavailable, and has not had an independent security review or external load test.
 - **Chaos Lab is synthetic.** It changes no provider state and sends no load. Its UI identifies the scenario as simulated and confines the scenario label to Staging.
 - **Installation testing is same-host only.** A fresh isolated checkout with separate Compose volumes passed the documented setup, migrations, health checks and browser workflow on this Windows/Docker Desktop host. A second physical machine was not available.
 - **Flagsmith retry semantics are not fully verified.** A real provider test event and real Staging flag changes were delivered and processed. Provider retry/backoff behavior under callback outage and duplicate provider retry delivery were not tested.
 - **A fresh Flagsmith login could not be verified.** The supplied account was rejected by the local Flagsmith login page on one attempt. Earlier isolated Staging synchronization and webhook tests passed; confirm the account before repeating a live provider round trip.
-- **Public hosting is not configured or deployed.** There is no public URL; provider account access and any cost approval are prerequisites.
+- **Public hosting is paused by user direction to keep the budget at ₹0.** There is no public URL. Render's included bandwidth and pipeline limits can incur charges when exceeded, and a $0 spending cap was not verified; no Render resources were created.
 - **Provider-specific rollback is unverified and disabled; FlagForge's own external GitHub cleanup/PR lifecycle is unverified.**
 
 ## Low

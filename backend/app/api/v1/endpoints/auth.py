@@ -1,6 +1,7 @@
 from datetime import timedelta
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
@@ -21,6 +22,11 @@ from app.schemas.auth import (
     UserOut,
 )
 from app.api.deps import get_current_user
+from app.core.login_rate_limit import (
+    clear_account_login_attempts,
+    enforce_login_rate_limit,
+    get_login_rate_limit_redis,
+)
 
 router = APIRouter()
 
@@ -54,9 +60,12 @@ async def register(
 @router.post("/login", response_model=Token)
 async def login(
     login_in: UserLogin,
+    request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
+    redis: Annotated[Redis, Depends(get_login_rate_limit_redis)],
 ):
     """Authenticates user and returns access and refresh JWT tokens."""
+    await enforce_login_rate_limit(request, login_in.email, redis)
     stmt = select(User).where(User.email == login_in.email.lower().strip())
     user = (await db.execute(stmt)).scalar_one_or_none()
 
@@ -71,6 +80,8 @@ async def login(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User account is deactivated",
         )
+
+    await clear_account_login_attempts(request, login_in.email, redis)
 
     access_token = create_access_token(
         subject=user.id,
