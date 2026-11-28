@@ -23,15 +23,15 @@ Read from:
 
 | Category | Priority | Action |
 |----------|----------|--------|
-| Must-have failures | 🔴 High | Create fix phase |
+| Must-have failures | High | Create a focused fix plan; use a new phase only for cross-cutting gaps |
 | Technical debt | 🟡 Medium | Add to roadmap |
 | Nice-to-have misses | 🟢 Low | Add to backlog |
 
 ---
 
-## 3. Create Gap Closure Phase
+## 3. Choose Focused Plan or Gap Phase
 
-Add new phase to ROADMAP.md:
+For one contained fix, write one focused plan. Add a roadmap phase only when the findings form a genuinely large, cross-cutting milestone:
 
 ```markdown
 ### Phase {N}: Gap Closure

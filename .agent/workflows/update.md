@@ -116,11 +116,17 @@ Copy-Item -Recurse -Force ".gsd-update-temp/.agents/*" ".agents/"
 # Update templates only
 Copy-Item -Recurse -Force ".gsd-update-temp/.gsd/templates/*" ".gsd/templates/"
 
-# Update root files
-Copy-Item -Force ".gsd-update-temp/GSD-STYLE.md" "./"
+# Update tool-specific metadata only. Keep PROJECT_RULES.md canonical and preserve
+# local development conventions; review upstream changes and merge them manually.
 Copy-Item -Force ".gsd-update-temp/CHANGELOG.md" "./"
-Copy-Item -Force ".gsd-update-temp/PROJECT_RULES.md" "./"
 Copy-Item -Force ".gsd-update-temp/VERSION" "./"
+
+# Add upstream adapters without overwriting local files.
+New-Item -ItemType Directory -Force "docs/development/ai-adapters" | Out-Null
+Get-ChildItem ".gsd-update-temp/adapters" -File -ErrorAction SilentlyContinue | ForEach-Object {
+    $target = Join-Path "docs/development/ai-adapters" $_.Name
+    if (-not (Test-Path $target)) { Copy-Item $_.FullName $target }
+}
 ```
 
 **Bash:**
@@ -140,10 +146,14 @@ cp -r .gsd-update-temp/.agents/* .agents/
 cp -r .gsd-update-temp/.gsd/templates/* .gsd/templates/
 
 # Update root files
-cp .gsd-update-temp/GSD-STYLE.md ./
 cp .gsd-update-temp/CHANGELOG.md ./
-cp .gsd-update-temp/PROJECT_RULES.md ./
 cp .gsd-update-temp/VERSION ./
+
+# Add upstream adapters without overwriting local files.
+mkdir -p docs/development/ai-adapters
+if [ -d .gsd-update-temp/adapters ]; then
+  find .gsd-update-temp/adapters -maxdepth 1 -type f -exec sh -c 'for f do target="docs/development/ai-adapters/${f##*/}"; [ -e "$target" ] || cp "$f" "$target"; done' sh {} +
+fi
 ```
 
 ---

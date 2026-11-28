@@ -1,3 +1,4 @@
+> **Archived historical plan.** This initial plan predates the implemented FastAPI/Next.js/Docker Compose architecture. It is retained for project history and is not a current implementation guide.
 ---
 phase: 1
 plan: 1

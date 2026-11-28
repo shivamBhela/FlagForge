@@ -52,11 +52,11 @@ These rules integrate with the GSD workflows:
 
 ## Gemini-Specific Tips
 
-For Gemini-specific enhancements, see [adapters/GEMINI.md](../adapters/GEMINI.md).
+For Gemini-specific enhancements, see [the Gemini adapter notes](../docs/development/ai-adapters/GEMINI.md).
 
 Key recommendations:
-- **Flash** for quick iterations and simple edits
-- **Pro** for complex planning and analysis
+- A fast model for quick iterations and simple edits
+- A reasoning-capable model for complex planning and analysis
 - Large context is available but **search-first** still applies
 
 ---
@@ -64,4 +64,3 @@ Key recommendations:
 *GSD Methodology adapted for Google Antigravity*
 *Canonical rules: [PROJECT_RULES.md](../PROJECT_RULES.md)*
 *Source: https://github.com/glittercowboy/get-shit-done*
-

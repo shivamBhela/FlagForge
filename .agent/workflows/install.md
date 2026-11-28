@@ -69,13 +69,21 @@ Copy-Item -Recurse ".gsd-install-temp\.agent" ".\"
 Copy-Item -Recurse ".gsd-install-temp\.agents" ".\"
 Copy-Item -Recurse ".gsd-install-temp\.gemini" ".\"
 Copy-Item -Recurse ".gsd-install-temp\.gsd" ".\"
-Copy-Item -Recurse ".gsd-install-temp\adapters" ".\"
 Copy-Item -Recurse ".gsd-install-temp\docs" ".\"
 Copy-Item -Recurse ".gsd-install-temp\scripts" ".\"
 
-# Root files
-Copy-Item -Force ".gsd-install-temp\PROJECT_RULES.md" ".\"
-Copy-Item -Force ".gsd-install-temp\GSD-STYLE.md" ".\"
+# Development guidance: preserve the project's canonical rules.
+New-Item -ItemType Directory -Force "docs\development\ai-adapters" | Out-Null
+Get-ChildItem ".gsd-install-temp\adapters" -File -ErrorAction SilentlyContinue | ForEach-Object {
+    $target = Join-Path "docs\development\ai-adapters" $_.Name
+    if (-not (Test-Path $target)) { Copy-Item $_.FullName $target }
+}
+if (-not (Test-Path "PROJECT_RULES.md")) {
+    Copy-Item -Force ".gsd-install-temp\PROJECT_RULES.md" ".\"
+}
+if (-not (Test-Path "docs\development\AI_WORKFLOW_CONVENTIONS.md")) {
+    Copy-Item -Force ".gsd-install-temp\GSD-STYLE.md" "docs\development\AI_WORKFLOW_CONVENTIONS.md"
+}
 Copy-Item -Force ".gsd-install-temp\model_capabilities.yaml" ".\"
 ```
 
@@ -86,13 +94,16 @@ cp -r .gsd-install-temp/.agent ./
 cp -r .gsd-install-temp/.agents ./
 cp -r .gsd-install-temp/.gemini ./
 cp -r .gsd-install-temp/.gsd ./
-cp -r .gsd-install-temp/adapters ./
 cp -r .gsd-install-temp/docs ./
 cp -r .gsd-install-temp/scripts ./
 
-# Root files
-cp .gsd-install-temp/PROJECT_RULES.md ./
-cp .gsd-install-temp/GSD-STYLE.md ./
+# Development guidance: preserve the project's canonical rules.
+mkdir -p docs/development/ai-adapters
+if [ -d .gsd-install-temp/adapters ]; then
+  find .gsd-install-temp/adapters -maxdepth 1 -type f -exec sh -c 'for f do target="docs/development/ai-adapters/${f##*/}"; [ -e "$target" ] || cp "$f" "$target"; done' sh {} +
+fi
+test -e PROJECT_RULES.md || cp .gsd-install-temp/PROJECT_RULES.md ./
+test -e docs/development/AI_WORKFLOW_CONVENTIONS.md || cp .gsd-install-temp/GSD-STYLE.md docs/development/AI_WORKFLOW_CONVENTIONS.md
 cp .gsd-install-temp/model_capabilities.yaml ./
 ```
 
@@ -151,11 +162,10 @@ Files installed:
 • .agents/       (subagents + skills — Agent Skills standard)
 • .gemini/       (Gemini integration)
 • .gsd/          (project state templates)
-• adapters/      (model-specific enhancements)
 • docs/          (operational documentation)
 • scripts/       (utility scripts)
 • PROJECT_RULES.md
-• GSD-STYLE.md
+• docs/development/AI_WORKFLOW_CONVENTIONS.md (installed only if absent)
 • model_capabilities.yaml
 
 ───────────────────────────────────────────────────────

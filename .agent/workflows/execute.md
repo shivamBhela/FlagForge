@@ -6,24 +6,11 @@ argument-hint: "<phase-number> [--gaps-only]"
 # /execute Workflow
 
 <role>
-You are a GSD executor orchestrator. You do not execute plans yourself — you delegate each
-plan to a `gsd-executor` subagent and route the results.
-
-**Core responsibilities:**
-- Validate phase exists and has plans
-- Discover and group plans by execution wave
-- Delegate each plan to a `gsd-executor` subagent with a clean context
-- Verify phase goal after all plans complete
-- Update roadmap and state on completion
+Execute the explicitly requested phase plan. Work directly by default; a gsd-executor helper is optional when requested or materially useful.
 </role>
 
 <objective>
-Execute all plans in a phase using wave-based execution, one subagent per plan.
-
-Orchestrator stays lean: discover plans, analyze dependencies, group into waves, delegate,
-read compact results, verify against phase goal.
-
-**Context budget:** ~15% orchestrator. Each plan executes in its own subagent context.
+Execute the requested phase plans in dependency order. Group work only when real dependencies require it. Direct execution is the default; helper delegation is optional.
 </objective>
 
 <context>
@@ -31,7 +18,7 @@ read compact results, verify against phase goal.
 
 **Flags:**
 - `--gaps-only` — Execute only gap closure plans (created by `/verify` when issues found)
-- `--inline` — Force inline execution without subagents (debugging escape hatch)
+- --delegate — Use an optional helper when delegation is requested or materially useful
 
 **Required files:**
 - `.gsd/ROADMAP.md` — Phase definitions
@@ -130,7 +117,7 @@ ls "$PHASE_DIR"/*-SUMMARY.md 2>/dev/null
 
 ---
 
-## 5. Group Plans by Wave
+## 5. Review Plan Dependencies
 
 Read `wave` field from each plan's frontmatter:
 
@@ -142,9 +129,11 @@ wave: 1
 ---
 ```
 
-**Group plans by wave number.** Lower waves execute first.
+Use explicit dependency fields to order work safely. If there are no meaningful dependencies,
+execute plans directly without inventing wave groupings. Existing wave fields are historical
+metadata unless they represent a real dependency.
 
-Display wave structure:
+Display execution order only when useful:
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  GSD ► EXECUTING PHASE {N}
@@ -153,144 +142,26 @@ Display wave structure:
 Wave 1: {plan-1}, {plan-2}
 Wave 2: {plan-3}
 
-{X} plans across {Y} waves
+{X} plans in dependency order
 ```
 
 ---
 
-## 6. Execute Waves
+## 6. Execute Plans
 
-### 6a. Check Delegation Capability
-
-Look for `invoke_subagent` in your available tools.
-
-| Result | Path |
-|--------|------|
-| Available, and no `--inline` flag | **Delegated mode** — 6b |
-| Unavailable, or `--inline` passed | **Inline mode** — 6e |
-
----
-
-### 6b. Delegate Each Plan in the Wave
-
-For each wave in order, invoke one `gsd-executor` subagent per plan.
-
-**Workspace mode:**
-
-| Plans in wave | Mode | Reason |
-|---------------|------|--------|
-| 1 | `inherit` | Nothing to collide with |
-| 2+ | `branch` | Concurrent writers need isolated worktrees |
-
-**Invocation prompt** — paths only, never file contents:
-
-```
-plan_path: .gsd/phases/{phase}/{n}-PLAN.md
-phase: {N}
-completed_tasks: {only on continuation, from a prior checkpoint}
-
-Read .gsd/STATE.md and PROJECT_RULES.md first.
-Execute this plan only. Commit per task. Write your SUMMARY.md.
-Return the compact block from your Return Contract — nothing else.
-```
-
-Constraints from `.gsd/STATE.md` that bound the work (accepted decisions, known blockers)
-go in the prompt as plain lines. The subagent cannot see this conversation.
-
-See `.agents/skills/subagent-delegation/SKILL.md` for the full protocol.
-
----
-
-### 6c. Route Each Result
-
-Each subagent returns a compact block. **Do not read the SUMMARY.md files** — the block is
-enough to route, and reading them re-imports the context delegation just saved.
-
-| `status` | Action |
-|----------|--------|
-| `complete` | Record commits, continue |
-| `checkpoint` | Present the checkpoint to the user, stop the wave, resume with a fresh subagent carrying `completed_tasks` |
-| `blocked` | Report the blocker, stop the wave, do not start the next one |
-| no result / subagent died | Report as failure and stop — do not silently redo the work inline |
-
----
-
-### 6d. Close the Wave
-
-1. If the wave ran in `branch` mode, merge each worktree back and resolve conflicts
-2. Confirm every plan in the wave has a SUMMARY.md on disk
-3. Only then start the next wave
-
----
-
-### 6e. Inline Fallback (Antigravity 1.x)
-
-Announce degraded mode once:
-
-```
-⚠️  Subagent delegation unavailable (requires Antigravity 2.0+)
-    Running inline — context will fill faster.
-    Recommended: one plan per session, /pause between plans.
-```
-
-Then, for **one plan only** — never a full wave:
-
-1. **Load plan context** — Read only the PLAN.md file
-2. **Execute tasks** — Follow `<task>` blocks in order
-3. **Verify each task** — Run `<verify>` commands
-4. **Commit per task** — separate commands, never chained with `&&`:
-
-   **PowerShell:**
-   ```powershell
-   git add -A
-   git commit -m "feat(phase-{N}): {task-name}"
-   git log -1 --oneline
-   ```
-
-   **Bash:**
-   ```bash
-   git add -A
-   git commit -m "feat(phase-{N}): {task-name}"
-   git log -1 --oneline
-   ```
-
-   Read the `git log` output and confirm it names this task. A commit you did not verify did
-   not happen.
-5. **Create SUMMARY.md** — Document what was done
-6. **Stop and offer `/pause`** so the next plan starts on a fresh context
+1. Execute the requested plans directly in dependency order.
+2. Use a wave grouping only when it makes genuine dependencies or independent work clearer.
+3. Use a subagent only when requested or when separate work materially benefits from one; Antigravity support is optional.
+4. Run the verification for each task and preserve safe commit boundaries.
+5. Write summaries only where the plan or project record requires them.
 
 ---
 
 ## 7. Verify Phase Goal
 
-After all waves complete.
+Check each phase must-have against the actual code and run its relevant verification. Direct verification is the default. An independent verifier helper may be used when requested or when a separate context materially increases confidence; label the evidence accordingly.
 
-**Delegated mode:** invoke `gsd-verifier` with `phase: {N}` and workspace mode `share`. It
-returns a compact verdict. Skip to "Route by verdict" — the orchestrator does not re-verify.
-
-The verifier's independence is the point: it never saw the implementation, so it cannot
-inherit the executors' assumptions about their own work.
-
-**Inline mode:**
-
-1. **Read phase goal** from ROADMAP.md
-2. **Check must-haves** against actual codebase (not SUMMARY claims)
-3. **Run verification commands** specified in phase
-
-**Create VERIFICATION.md:**
-```markdown
-## Phase {N} Verification
-
-### Must-Haves
-- [x] Must-have 1 — VERIFIED (evidence: ...)
-- [ ] Must-have 2 — FAILED (reason: ...)
-
-### Verdict: PASS / FAIL
-```
-
-**Route by verdict:**
-- `PASS` → Continue to step 8
-- `FAIL` → Create gap closure plans, offer `/execute {N} --gaps-only`
+Record failed or blocked requirements without softening the result.
 
 ---
 
@@ -313,7 +184,7 @@ inherit the executors' assumptions about their own work.
 Phase {N} executed successfully. {X} plans, {Y} tasks completed.
 
 ## Next Steps
-1. Proceed to Phase {N+1}
+1. Offer the next phase only as an optional continuation; do not create or start it automatically.
 ```
 
 **Update REQUIREMENTS.md** (if exists):
@@ -351,11 +222,8 @@ Goal verified ✓
 
 ───────────────────────────────────────────────────────
 
-▶ Next Up
-Phase {N+1}: {Name}
-
-/plan {N+1}  — create execution plans
-/execute {N+1} — execute directly (if plans exist)
+▶ Optional continuation
+The user may request planning or execution for another phase.
 
 ───────────────────────────────────────────────────────
 ```

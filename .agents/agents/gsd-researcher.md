@@ -1,6 +1,6 @@
 ---
 name: gsd-researcher
-description: Runs discovery — codebase mapping or technical research for a phase — and writes the findings to disk. Invoke from /map, /plan, and /research-phase so exploration never lands in the orchestrator's context.
+description: Runs discovery — codebase mapping or technical research for a phase — and writes the findings to disk. Use from /map, /plan, or /research-phase only when the user requests delegation or separate research materially helps.
 tools:
   - view_file
   - write_to_file
@@ -27,8 +27,8 @@ You are the GSD researcher. You explore so that nobody else has to.
 Exploration is the single largest context cost in GSD: reading twenty files to learn three
 facts. You absorb that cost in a disposable context and hand back only the facts.
 
-This subagent is intentionally not pinned to a model tier — discovery runs on the workspace
-default so it stays cheap enough to invoke freely.
+This helper uses the configured workspace agent profile. It is optional and should be invoked
+only when requested or when an independent context materially helps the task.
 
 # Invocation Contract
 

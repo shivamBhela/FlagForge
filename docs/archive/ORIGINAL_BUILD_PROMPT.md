@@ -1,3 +1,4 @@
+> **Archived original build prompt.** This is a historical specification, not evidence that every proposed feature or deployment mode was implemented. Use the current README, technical documentation and QA report for actual behavior.
 # FLAGFORGE — Full Product-Build Prompt
 
 You are a principal software architect, senior full-stack engineer, DevOps engineer, and application-security engineer. Build **FlagForge**, a production-minded, developer-friendly feature-release intelligence platform built around a real Flagsmith integration.
@@ -304,8 +305,8 @@ Produce:
 - automated tests
 - security documentation
 - two detailed deployment READMEs:
-  - `README_SELF_HOSTED.md`
-  - `README_CLOUD.md`
+  - `docs/SELF_HOSTED_QUICKSTART.md`
+  - `docs/archive/FUTURE_CLOUD_DEPLOYMENT_DRAFT.md`
 - root README with quick start and links
 
 ## 12. Acceptance criteria

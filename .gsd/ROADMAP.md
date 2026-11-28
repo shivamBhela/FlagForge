@@ -1,13 +1,13 @@
 ---
 milestone: "FlagForge Application Core"
 version: "0.2.0"
-updated: "2026-11-24T18:27:00Z"
+updated: "2026-11-28"
 ---
 
 # FlagForge Roadmap
 
 > **Current Phase:** 11 - End-to-End Verification and Remaining Integrations
-> **Status:** partial; local Flagsmith, Redis worker and OTLP ingestion are verified, but native webhook delivery, GitHub PR creation, remote rollback and fresh-clone installation are incomplete or unverified.
+> **Status:** Partial based on the 2026-11-28 QA reports. Docker, migrations, backend/CLI/frontend checks and headed browser workflows passed. The latest FlagForge session has no connected Flagsmith instance; prior isolated Staging sync/webhook and telemetry ingestion results are historical. Provider rollback remains disabled, and the application cleanup-to-PR workflow is not live-verified. No public deployment exists.
 
 ## Must-Haves (from SPEC)
 
@@ -47,8 +47,8 @@ updated: "2026-11-24T18:27:00Z"
 ---
 
 ### Phase 3: Flagsmith Integration & Synchronizer
-**Status:** 🟡 Partial — local self-hosted Management API sync is live-verified; native webhook delivery is not.
-**Objective:** Backend adapter for Flagsmith Management API (Cloud/self-hosted), connection tests, project/environment/flag synchronization and secure webhook handler. Local sync is live verified; provider webhook delivery remains unverified.
+**Status:** 🟡 Partial — isolated Staging sync, state-change detection and signed webhook processing passed historically; the latest QA run had no connected instance and made no provider request.
+**Objective:** Backend adapter for Flagsmith Management API (Cloud/self-hosted), connection tests, project/environment/flag synchronization and secure webhook handler. Historical Staging sync and signed webhook tests passed; current live connectivity was not reverified in the latest QA run.
 **Requirements:** REQ-03, NFR-03
 **Depends on:** Phase 2
 
@@ -82,8 +82,8 @@ updated: "2026-11-24T18:27:00Z"
 ---
 
 ### Phase 7: Live Monitor & Telemetry Pipeline
-**Status:** ✅ Complete
-**Objective:** Authenticated OTLP/HTTP histogram ingestion, Collector forwarding, persisted project/environment attribution, histogram-aware aggregation and real QA traffic through Monitor/Risk. Live QA path verified; real production telemetry is not claimed.
+**Status:** ✅ Implemented; latest runtime telemetry not present
+**Objective:** Authenticated OTLP/HTTP histogram ingestion, Collector forwarding, persisted project/environment attribution, histogram-aware aggregation. Automated ingestion coverage passed; the latest QA Monitor had zero telemetry windows. Real production telemetry is not claimed.
 **Requirements:** REQ-07
 **Depends on:** Phase 6
 
@@ -106,18 +106,15 @@ updated: "2026-11-24T18:27:00Z"
 ---
 
 ### Phase 10: Cleanup Studio & Hybrid AI Explanation
-**Status:** 🟡 Partial — stale-flag evidence and local diff preview work; GitHub PR creation is not implemented.
-**Objective:** Stale-flag evidence, reviewable patch generation and structured explanation. GitHub App authorization, branch/commit/PR lifecycle remain unimplemented and return HTTP 501.
+**Status:** 🟡 Partial — suggestions and local review previews exist; the application-owned cleanup-to-PR lifecycle is not live-verified.
+**Objective:** Stale-flag evidence, reviewable patch generation and structured explanation. GitHub API/PR lifecycle requires separate authorization and remains unverified in current QA.
 **Requirements:** REQ-10
 **Depends on:** Phase 9
 
 ---
 
 ### Phase 11: End-to-End Polish & Full Platform Delivery
-**Status:** 🟡 Partial — local deployment, live integrations and browser flows verified; external-provider gaps and clean-clone installation remain.
+**Status:** 🟡 Partial — fresh Docker health, migrations, tests and browser workflows passed on 2026-11-28. Fresh Flagsmith authentication/sync, live CLI comparison, application PR flow, production readiness and public hosting remain unverified or out of scope.
 **Objective:** Unified platform verification, accurate integration classifications, comprehensive tests, installation docs and production limitations.
 **Requirements:** REQ-11
 **Depends on:** Phase 10
-**Objective:** Tree-sitter / AST static scanner detecting feature-flag usage in JS/TS and Python with confidence scoring and reference tracking.
-**Requirements:** REQ-04
-**Depends on:** Phase 3

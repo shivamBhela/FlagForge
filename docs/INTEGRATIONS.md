@@ -6,6 +6,8 @@ Official self-hosted Flagsmith is the primary local demonstration target. FlagFo
 
 The API's `FLAGSMITH_ALLOWED_HOSTS` is an exact-host allowlist for private service DNS. It does not allow arbitrary private addresses, loopback, link-local, or metadata destinations.
 
+Connection validation and synchronization are implemented in the API. Automated integration tests mock the remote Flagsmith responses. A prior isolated local QA run verified real Staging discovery/synchronization and signed webhook delivery; the latest recorded full-stack run had no connected Flagsmith instance and did not repeat those provider calls. Treat that live result as historical evidence, not current connectivity.
+
 ## GitHub
 
 Cleanup Studio supports organization-scoped GitHub access using either:
@@ -19,7 +21,7 @@ No GitHub credentials or authorized test repository are configured in this envir
 
 ## OpenTelemetry
 
-The demo app emits OTLP/HTTP JSON histograms to the Collector, which exports authenticated data to FlagForge's ingestion endpoint. The endpoint validates configured organization/project/environment/service attribution and persists request, error and histogram observations. Runtime Monitor and Risk Engine were verified with QA traffic. Missing telemetry is reported as insufficient data. Do not treat demo traffic as production measurements.
+The demo app emits OTLP/HTTP JSON histograms to the Collector, which exports authenticated data to FlagForge's ingestion endpoint. The endpoint validates configured organization/project/environment/service attribution and persists request, error and histogram observations. Automated tests verify authentication, payload validation, tenant attribution and persistence; a prior local end-to-end QA run verified Collector-to-API ingestion using demo-app traffic. The latest recorded Monitor session had zero telemetry windows. The pipeline supports application telemetry, but these results are not customer traffic or a current production measurement. Missing telemetry is reported as insufficient data.
 
 ## Redis and workers
 

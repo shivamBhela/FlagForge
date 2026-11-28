@@ -13,7 +13,6 @@ tools:
   - send_message
 subagent: true
 mainAgent: false
-model: pro
 skills:
   - skills/debugger
   - skills/empirical-validation
