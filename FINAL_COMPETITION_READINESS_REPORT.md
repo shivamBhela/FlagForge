@@ -12,7 +12,34 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 
 ## Completion estimate
 
-**75% against the 24-item acceptance checklist.** Method: each item is equally weighted; PASS = 1 point, PARTIAL = 0.5, and BLOCKED or NOT IMPLEMENTED = 0. Current estimate: 16 PASS, 4 PARTIAL, 0 NOT IMPLEMENTED, 4 BLOCKED (18/24 points). This measures checklist delivery only; it is not a production-readiness score.
+**Recalculated local QA checklist: 77.1% (18.5/24 points).** Each of the following 24 categories is equally weighted: PASS = 1, PARTIAL = 0.5, BLOCKED = 0. Current tally is 16 PASS, 5 PARTIAL, and 3 BLOCKED (no NOT IMPLEMENTED category). This is an explicit local QA completion measure, not a competition judging result or production-readiness score.
+
+| # | Acceptance area | Status | Evidence / limitation |
+| --- | --- | --- | --- |
+| 1 | Authentication and JWT | PASS | Backend suite and browser registration/login/logout |
+| 2 | Organization and membership management | PASS | Create/read/update membership flows exercised |
+| 3 | RBAC | PASS | Backend authorization tests |
+| 4 | Cross-tenant isolation | PASS | Backend tenant-boundary tests |
+| 5 | Database CRUD and persistence | PASS | Backend/browser CRUD and reload persistence |
+| 6 | Fresh Flagsmith Management API authentication/discovery | BLOCKED | No connected instance in latest run; fresh live credentials were not supplied locally |
+| 7 | Flagsmith synchronization and change detection | PARTIAL | Historical isolated Staging sync/change detection passed; not repeated in latest run |
+| 8 | Signed Flagsmith webhooks | PARTIAL | Historical isolated Staging webhook passed; no fresh delivery in latest run |
+| 9 | Scanner | PASS | Unit tests and local/public read-only scan evidence |
+| 10 | Dependency graph | PASS | Source-backed graph and headed UI refresh |
+| 11 | Chaos Lab safety | PASS | Synthetic Staging-only run; Production remained locked; no load/provider mutation |
+| 12 | OpenTelemetry monitoring | PARTIAL | Earlier ingestion path verified; current Monitor has zero telemetry windows |
+| 13 | Risk Engine | PASS | Regression boundaries and latest deterministic evaluation |
+| 14 | Release Guardian | PARTIAL | Advisory/manual approval works; provider rollback remains safely disabled |
+| 15 | Cleanup Studio | PARTIAL | Suggestions/draft preview exercised; source patch and app-owned PR flow not verified |
+| 16 | Background workers and recovery | PASS | Worker recovery script and current worker health |
+| 17 | Docker services and migrations | PASS | 10 healthy long-running services; migrations exited 0; current/head match |
+| 18 | Isolated backup/restore | PASS | Both databases restored in temporary tmpfs-backed PostgreSQL; existing volumes untouched |
+| 19 | Frontend quality checks | PASS | Lint, TypeScript, production build and npm audit passed |
+| 20 | Browser routes and workflows | PASS | Headed Playwright, 18 routes and real local workflows |
+| 21 | Responsive mobile layout | PASS | 390px viewport checked for horizontal overflow |
+| 22 | Companion CLI local workflows | PASS | 12 tests plus help, doctor, scan, dependencies and report commands |
+| 23 | Live CLI environment comparison | BLOCKED | Provider comparison tests are mocked; no valid Development/Staging keys entered locally |
+| 24 | GitHub publication and hosted CI | PASS | Remote SHA verified; Actions run 46136196032 succeeded; PR remains open/draft |
 
 ## 2. What was already present
 
@@ -105,14 +132,14 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 - **PASS:** Compose defaults Flagsmith Gunicorn to one worker; the currently running Flagsmith service uses one worker and is healthy.
 - **PASS (static configuration):** Default/Core, Dashboard, Observability and Full Compose service selection validate; Core omits the web, Collector and demo-app services. Full profile runtime health is confirmed above.
 - **NOT DEPLOYED (by user direction):** Public hosting is paused while keeping the budget at ₹0. Render shows the Hobby workspace has no payment method and zero current usage, but its included bandwidth/pipeline overages can be billed and no $0 spend cap was verified. No Render resources were created; local Docker remains the complete demo.
-- **NOT VERIFIED:** Clean deployment after the latest configuration change, public ingress/TLS, restore-from-backup, HA, and production load.
+- **NOT VERIFIED:** Public ingress/TLS, production restore procedures beyond the isolated drill, HA, and production load.
 
 ## 15. Security and privacy status
 
 - **PASS (automated checks):** Earlier auth/RBAC/tenant, SSRF, cryptography, webhook, and config tests passed; npm audit reported zero known vulnerabilities.
 - **PASS:** CLI archive scanning enforces GitHub host/redirect validation, bounded downloads/extraction, path traversal checks, and does not execute repository content. Credentials are sourced from the process environment/official CLI config and are not printed by the report.
 - **PASS:** Redis-backed login throttling is implemented per IP and account with a 15-minute window, hashed identifiers, `Retry-After`, and fail-closed behavior when Redis is unavailable. Automated tests cover lockout, recovery after successful login, and Redis outage. The rebuilt API was verified against real Compose Redis.
-- **PARTIAL:** TLS/ingress, key rotation operations, backup restoration, HA, production hardening, and independent security review are incomplete or unverified.
+- **PARTIAL:** TLS/ingress, key rotation operations, production restore procedures beyond the isolated drill, HA, production hardening, and independent security review are incomplete or unverified.
 - **PARTIAL:** Flagsmith startup logs emit an upstream Django-Axes warning that lockout parameters omit `ip_address`; this Compose configuration was not changed pending a supported upstream setting. The local stack is not publicly exposed.
 - **PASS:** No production Flagsmith flags were intentionally changed; the prior live webhook/synchronization checks were isolated to Staging and test flags.
 
@@ -139,7 +166,7 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 | Compose profile selection | PASS (static) | `docker compose config --quiet` plus service-list checks for default/Core, Dashboard, Observability and Full. Engine was not needed for config validation. |
 | Docker/migrations | PASS (current runtime) | Ten long-running services healthy; both one-shot migrations exited 0; Alembic `009_encrypt_webhook_secrets (head)`; Full profile HTTP checks passed. |
 | GitHub publication | PASS | Remote branch SHA matches local. PR #1 is an open draft against `main`; no merge. |
-| GitHub Actions CI | PASS (published commit) | Run 46136020658 succeeded for published commit `ee06fbba1b2285fdf9997e68a3e2663991e7b7f6`. It validates the branch through the local QA-report/ignore updates; the later CI-note wording change is documentation-only. |
+| GitHub Actions CI | PASS (published commit) | Run 46136196032 succeeded for published commit `ff845152950de8710aded61981b5d4fe2349808f`. |
 
 ## 17. Known issues and limitations
 
@@ -175,7 +202,7 @@ flagforge report --format markdown
 1. Confirm the local Flagsmith account credentials, then rerun isolated Staging discovery/sync/change detection and webhook verification.
 2. Connect an authorized deployment provider/account; confirm plan and any cost before provisioning, then deploy and verify the full architecture.
 3. Implement or clearly defer the missing CLI workflows (`diff`, authenticated monitor context, safe PR preparation) and add command-level tests.
-4. Verify login throttling against the running Redis-backed API, then complete TLS/ingress, backup/restore, load, HA, and independent security review before any production use.
+4. The isolated backup/restore drill passed; before production use, establish operational restore procedures, then complete TLS/ingress, load, HA, and independent security review.
 
 **Evidence preservation:** Fresh Playwright screenshots, raw logs, video metadata and the evidence index remain under ignored `artifacts/`; prior screenshots/traces also remain under ignored `frontend/test-results/`. No credentials or generated sensitive test data are committed. Existing Docker volumes were not removed.
 

@@ -28,7 +28,7 @@
 | Docker memory snapshot | **Passed (point-in-time)** | Latest `docker stats --no-stream` measured approximately 0.98 GiB across ten running services against the 3.67 GiB Docker VM limit; this was not a peak/load/soak measurement. |
 | Companion CLI unit tests | **Passed (latest; diff responses mocked)** | `python -m unittest discover -s cli/tests -v`: 12 passed, including environment diff classification, duplicate/same-environment rejection, no-input handling and provider error redaction. |
 | Latest frontend lint/type/build | **Passed** | `npm run lint`, `npx tsc --noEmit`, and `npm run build` exited 0; build generated 20 routes (19 static, one dynamic project-detail route). Full and production-only `npm audit` each reported zero vulnerabilities. |
-| GitHub Actions CI | **Passed (hosted)** | Run 46136020658 completed successfully for published commit `ee06fbba1b2285fdf9997e68a3e2663991e7b7f6`, including the QA report and `.gitignore` updates. The additional CI-note wording in this follow-up is documentation-only. |
+| GitHub Actions CI | **Passed (hosted)** | Run 46136196032 completed successfully for published commit `ff845152950de8710aded61981b5d4fe2349808f`. |
 
 ## Browser workflow
 
@@ -48,7 +48,7 @@ The earlier Docker-backed registration request remained pending during the Flags
 
 The fresh isolated checkout at `C:\Users\unbel\Downloads\FlagForge_CleanInstall_QA` also passed the headed Playwright run historically (1 passed, 32.6 seconds). The default project's named volumes were preserved; the fresh checkout created a separate set of volumes. Both installs ran on the same Windows/Docker Desktop host. In this latest run, the same existing stack recovered from a temporary Docker Desktop/WSL stall after an engine restart; no volumes or database contents were reset.
 
-The read-only CLI environment diff has mocked response coverage only; no source/target environment keys were supplied for a live comparison. Current QA did not reconnect to Flagsmith; the earlier local Management API and Staging webhook/sync results below are historical live evidence. Safe database backup and isolated restore instructions are documented in `DOCKER_SETUP.md`; a restore drill was not performed.
+The read-only CLI environment diff has mocked response coverage only; no source/target environment keys were supplied for a live comparison. Current QA did not reconnect to Flagsmith; the earlier local Management API and Staging webhook/sync results below are historical live evidence. The isolated restore drill passed for both FlagForge and Flagsmith PostgreSQL dumps in temporary tmpfs-backed databases; the existing project volumes were not mounted or changed. A first harness attempt failed before the corrected rerun passed. Raw logs are in `../artifacts/evidence/docker/restore_drill_20261128_144218.log`.
 
 ## Real and mocked integrations
 
@@ -64,6 +64,6 @@ The read-only CLI environment diff has mocked response coverage only; no source/
 
 - A second physical machine was not available; clean install evidence covers a separate checkout with isolated volumes on this host only.
 - Live GitHub authentication/PR lifecycle and race-safe provider rollback are unverified.
-- Provider webhook retries, TLS/public ingress, backup restore, HA/load and independent penetration testing are unverified.
+- Provider webhook retries, TLS/public ingress, production restore procedures beyond the isolated drill, HA/load and independent penetration testing are unverified.
 - Public hosting is paused by user direction to keep hosting local at ₹0. Render showed no card, zero usage and no pending charges, but included bandwidth/pipeline overages can be billed and no zero-spend cap was verified; no Render resources were created.
 - Redis-backed login rate limiting passed unit tests and a live local check against the rebuilt Docker API/Redis (eight 401 responses followed by 429 with `Retry-After`). TypeScript, full lint and production build pass.

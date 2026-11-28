@@ -4,7 +4,7 @@ This report separates live local verification from mocked, synthetic and unavail
 
 ## High
 
-- **Production deployment hardening is incomplete.** This Compose stack is local-development oriented. Public TLS/ingress, backup and restore drills, high availability, key rotation/expiry procedures and an independent security review have not been verified. Do not expose this stack publicly.
+- **Production deployment hardening is incomplete.** This Compose stack is local-development oriented. Public TLS/ingress, production recovery procedures beyond the isolated restore drill, high availability, key rotation/expiry procedures and an independent security review have not been verified. Do not expose this stack publicly.
 - **FlagForge's application PR workflow is unverified.** The repository branch `completion/final-readiness` is published, and draft PR [#1](https://github.com/shivamBhela/FlagForge/pull/1) is open against `main`. This is repository publication evidence, not a live test of FlagForge's own cleanup-to-PR workflow, which remains mock-tested only.
 
 ## Medium
@@ -30,8 +30,8 @@ This report separates live local verification from mocked, synthetic and unavail
 - Live use of FlagForge's PR workflow, separate from the already verified repository publication and draft PR.
 - Provider conditional-write semantics for rollback under concurrent changes.
 - Flagsmith webhook delivery retries and outage recovery behavior.
-- Public TLS, backup restore, multi-node deployment, production load and independent penetration testing.
+- Public TLS, production recovery procedures beyond the isolated drill, multi-node deployment, production load and independent penetration testing.
 
 ## Latest local verification note (2026-11-28)
 
-The Full Compose health check passed after a temporary Docker Desktop/WSL engine stall was recovered by restarting Docker Desktop. Ten long-running services were healthy, both migration jobs exited 0, and Alembic current/head were `009_encrypt_webhook_secrets`. Backend pytest (46), CLI pytest (12), frontend lint, TypeScript, production build (20 routes), npm audit (0 vulnerabilities), and headed Playwright (1 passed, 19.8s test / 25.6s total) passed. The current monitor view has no telemetry windows. Local synthetic Chaos output is not provider mutation or customer telemetry. See the [local evidence index](../artifacts/evidence/EVIDENCE_INDEX.md) and [no-voice demo shot list](../artifacts/demo/VIDEO_SHOTLIST.md); both artifacts are ignored by Git and remain local.
+The Full Compose health check passed after a temporary Docker Desktop/WSL engine stall was recovered by restarting Docker Desktop. Ten long-running services were healthy, both migration jobs exited 0, and Alembic current/head were `009_encrypt_webhook_secrets`. Backend pytest (46), CLI pytest (12), frontend lint, TypeScript, production build (20 routes), npm audit (0 vulnerabilities), and headed Playwright (1 passed, 19.8s test / 25.6s total) passed. The current monitor view has no telemetry windows. Local synthetic Chaos output is not provider mutation or customer telemetry. An isolated backup/restore drill for both PostgreSQL databases passed in temporary tmpfs-backed instances; existing named volumes remained untouched. See the [local evidence index](../artifacts/evidence/EVIDENCE_INDEX.md) and [no-voice demo shot list](../artifacts/demo/VIDEO_SHOTLIST.md); both artifacts are ignored by Git and remain local.
