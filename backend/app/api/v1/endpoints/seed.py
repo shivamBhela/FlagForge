@@ -82,9 +82,43 @@ async def seed_demo_data(
     await db.commit()
     await db.refresh(repo)
 
-    # 2. Run initial code scan
+    # 2. Run initial code scan with explicit synthetic demo fixtures
+    demo_code = {
+        "src/components/Checkout.tsx": """
+            import React from 'react';
+            import { useFlags } from 'flagsmith/react';
+
+            export function CheckoutView() {
+              const flags = useFlags(["checkout_v2_redesign", "instant_refunds"]);
+              const isV2 = flagsmith.hasFeature("checkout_v2_redesign");
+
+              if (isV2) {
+                return <ModernCheckout flow="v2" />;
+              }
+              return <LegacyCheckout />;
+            }
+        """,
+        "backend/services/payment.py": """
+            from flagsmith import Flagsmith
+
+            def process_payment(amount, user_id):
+                if flagsmith.has_feature("instant_refunds"):
+                    return approve_instant_refund(amount)
+                if flagsmith.is_feature_enabled("stripe_payment_element"):
+                    return execute_stripe_flow(amount)
+                return fallback_charge(amount)
+        """,
+        "src/api/recommendations.ts": """
+            export async function getRecommendations(userId: string) {
+              if (isFeatureEnabled("recommendations_ai_engine")) {
+                return fetchAiRecs(userId);
+              }
+              return fetchRuleBasedRecs(userId);
+            }
+        """,
+    }
     scanner = CodeScanner(db=db, organization_id=org_id)
-    await scanner.execute_scan(repository_id=repo.id)
+    await scanner.execute_scan(repository_id=repo.id, custom_files=demo_code)
 
     # 3. Build dependency graph
     dep_engine = DependencyEngine(db=db, organization_id=org_id)

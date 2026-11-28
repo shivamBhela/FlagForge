@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
@@ -16,15 +16,30 @@ router = APIRouter()
 
 class PolicyUpdate(BaseModel):
     mode: Optional[PolicyMode] = None
-    weight_dependency_impact: Optional[float] = None
-    weight_error_anomaly: Optional[float] = None
-    weight_latency_anomaly: Optional[float] = None
-    weight_change_criticality: Optional[float] = None
-    weight_rollout_velocity: Optional[float] = None
-    max_error_rate_threshold: Optional[float] = None
-    max_p95_latency_ms: Optional[float] = None
-    critical_risk_threshold: Optional[float] = None
+    weight_dependency_impact: Optional[float] = Field(None, ge=0.0, le=1.0)
+    weight_error_anomaly: Optional[float] = Field(None, ge=0.0, le=1.0)
+    weight_latency_anomaly: Optional[float] = Field(None, ge=0.0, le=1.0)
+    weight_change_criticality: Optional[float] = Field(None, ge=0.0, le=1.0)
+    weight_rollout_velocity: Optional[float] = Field(None, ge=0.0, le=1.0)
+    max_error_rate_threshold: Optional[float] = Field(None, gt=0.0, le=1.0)
+    max_p95_latency_ms: Optional[float] = Field(None, gt=100.0, le=60000.0)
+    critical_risk_threshold: Optional[float] = Field(None, ge=0.0, le=100.0)
     kill_switch_enabled: Optional[bool] = None
+
+    @model_validator(mode="after")
+    def validate_weights(self):
+        weights = [
+            self.weight_dependency_impact,
+            self.weight_error_anomaly,
+            self.weight_latency_anomaly,
+            self.weight_change_criticality,
+            self.weight_rollout_velocity,
+        ]
+        if all(w is not None for w in weights):
+            total = sum(weights)
+            if abs(total - 1.0) > 0.01:
+                raise ValueError(f"Sum of policy weights must equal 1.0 (current sum: {total:.3f})")
+        return self
 
 
 class RollbackRequest(BaseModel):

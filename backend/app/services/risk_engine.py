@@ -1,3 +1,4 @@
+import math
 import uuid
 import logging
 from typing import Dict, Any, Optional
@@ -85,10 +86,20 @@ class DeterministicRiskEngine:
             err_anomaly = 100.0
             lat_anomaly = 100.0
         else:
-            # Error rate anomaly: 0% = 0, 5% = 100
-            err_anomaly = min(100.0, (telem["avg_error_rate"] / policy.max_error_rate_threshold) * 100.0)
-            # Latency anomaly: 100ms = 0, 500ms = 100
-            lat_anomaly = min(100.0, max(0.0, (telem["avg_p95_ms"] - 100.0) / (policy.max_p95_latency_ms - 100.0)) * 100.0)
+            # Defensive error threshold handling
+            err_thresh = policy.max_error_rate_threshold if (policy.max_error_rate_threshold and policy.max_error_rate_threshold > 0) else 0.05
+            err_rate = telem.get("avg_error_rate", 0.0)
+            if math.isnan(err_rate) or math.isinf(err_rate) or err_rate < 0:
+                err_rate = 0.0
+            err_anomaly = min(100.0, max(0.0, (err_rate / err_thresh) * 100.0))
+
+            # Defensive latency threshold handling
+            lat_thresh = policy.max_p95_latency_ms if (policy.max_p95_latency_ms and policy.max_p95_latency_ms > 100.0) else 500.0
+            lat_diff = max(1.0, lat_thresh - 100.0)
+            p95_val = telem.get("avg_p95_ms", 100.0)
+            if math.isnan(p95_val) or math.isinf(p95_val):
+                p95_val = 100.0
+            lat_anomaly = min(100.0, max(0.0, ((p95_val - 100.0) / lat_diff) * 100.0))
 
         # 3. Change criticality & rollout velocity
         is_prod = "prod" in environment_name.lower()
@@ -103,7 +114,10 @@ class DeterministicRiskEngine:
             + policy.weight_change_criticality * change_criticality
             + policy.weight_rollout_velocity * rollout_velocity
         )
-        score = round(min(100.0, max(0.0, score)), 2)
+        if math.isnan(score) or math.isinf(score):
+            score = 50.0
+        else:
+            score = round(min(100.0, max(0.0, score)), 2)
 
         # A critical score remains advisory; rollback has no provider-side
         # concurrency guarantees and still requires a human decision.

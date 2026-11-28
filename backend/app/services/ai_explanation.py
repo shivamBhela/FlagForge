@@ -41,4 +41,5 @@ class HybridAIExplanationEngine:
             "recommended_actions": recommendations,
             "ai_mode": "DETERMINISTIC_HYBRID_ENGINE",
             "is_authoritative": False,
+            "advisory_only": True,
         }

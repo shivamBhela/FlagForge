@@ -97,6 +97,7 @@ export default function IntegrationsPage() {
   }, [currentOrg]);
 
   const handleTestConnection = async () => {
+    if (!currentOrg) return;
     if (!apiUrl.trim() || !token.trim()) {
       setError("Please provide API URL and Management Token to test.");
       return;
@@ -105,7 +106,7 @@ export default function IntegrationsPage() {
     setTestResult(null);
     setError("");
     try {
-      const res = await api.flagsmith.testConnection({
+      const res = await api.flagsmith.testConnection(currentOrg.id, {
         api_url: apiUrl.trim(),
         token: token.trim(),
         connection_type: connType,

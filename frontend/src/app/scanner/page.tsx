@@ -11,10 +11,10 @@ import {
   AlertTriangle,
   FileCode,
   Search,
-  ExternalLink,
   Plus,
   RefreshCw,
-  Sparkles,
+  GitBranch,
+  X,
 } from "lucide-react";
 
 export default function CodeScannerPage() {
@@ -29,6 +29,14 @@ export default function CodeScannerPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Modal for adding a new repository
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newRepoName, setNewRepoName] = useState("");
+  const [newRepoUrl, setNewRepoUrl] = useState("");
+  const [newRepoBranch, setNewRepoBranch] = useState("main");
+  const [newRepoLang, setNewRepoLang] = useState("typescript");
+  const [addingRepo, setAddingRepo] = useState(false);
+
   const loadData = async () => {
     if (!currentOrg) return;
     setLoading(true);
@@ -41,8 +49,8 @@ export default function CodeScannerPage() {
       setRepositories(repos);
       setScans(scList);
       setReferences(refs);
-      if (repos.length > 0 && !selectedRepo) {
-        setSelectedRepo(repos[0].id);
+      if (repos.length > 0) {
+        setSelectedRepo((prev) => (repos.some((r: any) => r.id === prev) ? prev : repos[0].id));
       }
     } catch (err: any) {
       setError(err.message || "Failed to load scanner data.");
@@ -67,7 +75,7 @@ export default function CodeScannerPage() {
         setScans(scanList);
         setReferences(refs);
         if (repos.length > 0) {
-          setSelectedRepo((previousRepo) => previousRepo || repos[0].id);
+          setSelectedRepo((prev) => (repos.some((r: any) => r.id === prev) ? prev : repos[0].id));
         }
       } catch (loadError: any) {
         if (!ignore) setError(loadError.message || "Failed to load scanner data.");
@@ -81,24 +89,54 @@ export default function CodeScannerPage() {
     };
   }, [currentOrg]);
 
+  const handleAddRepository = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentOrg) return;
+    if (!newRepoName.trim() || !newRepoUrl.trim()) {
+      setError("Repository name and GitHub URL are required.");
+      return;
+    }
+    setAddingRepo(true);
+    setError("");
+    try {
+      const repo = await api.scanner.createRepository(currentOrg.id, {
+        name: newRepoName.trim(),
+        repo_url: newRepoUrl.trim(),
+        default_branch: newRepoBranch.trim() || "main",
+        language: newRepoLang,
+      });
+      setShowAddModal(false);
+      setNewRepoName("");
+      setNewRepoUrl("");
+      setNewRepoBranch("main");
+      setSuccessMsg(`Repository "${repo.name}" added successfully.`);
+      await loadData();
+      setSelectedRepo(repo.id);
+    } catch (err: any) {
+      setError(err.message || "Failed to register repository.");
+    } finally {
+      setAddingRepo(false);
+    }
+  };
+
   const handleTriggerScan = async () => {
     if (!currentOrg) return;
-    let repoId = selectedRepo;
+    if (!selectedRepo) {
+      setError("Please register or select a repository before running a scan.");
+      return;
+    }
     setScanning(true);
     setError("");
     setSuccessMsg("");
     try {
-      if (!repoId && repositories.length === 0) {
-        // Auto create demo repository
-        const newRepo = await api.scanner.createRepository(currentOrg.id, {
-          name: "web-storefront",
-          repo_url: "https://example.invalid/flagforge/demo-web-storefront",
-          language: "typescript",
-        });
-        repoId = newRepo.id;
+      const scan = await api.scanner.triggerScan(currentOrg.id, selectedRepo);
+      if (scan.status === "FAILED") {
+        setError(`Scan failed: ${scan.error_message || "Could not fetch or parse repository archive."}`);
+      } else {
+        setSuccessMsg(
+          `Scan completed! Discovered ${scan.findings_count} flag references across ${scan.files_scanned} source files.`
+        );
       }
-      const scan = await api.scanner.triggerScan(currentOrg.id, repoId);
-      setSuccessMsg(`Scan completed! Discovered ${scan.findings_count} flag references across ${scan.files_scanned} files.`);
       await loadData();
     } catch (err: any) {
       setError(err.message || "Scan failed.");
@@ -123,18 +161,28 @@ export default function CodeScannerPage() {
             <span>Code Intelligence & Static AST Scanner</span>
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Tree-sitter and AST parsing across TypeScript, JavaScript, and Python discovering real flag references.
+            Language-aware AST parsing and lexical extraction discovering real Flagsmith feature-flag references.
           </p>
         </div>
 
-        <button
-          onClick={handleTriggerScan}
-          disabled={scanning}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white transition shadow-sm disabled:opacity-50"
-        >
-          <Play className={`w-3.5 h-3.5 ${scanning ? "animate-spin" : ""}`} />
-          <span>{scanning ? "Scanning AST..." : "Run AST Scan"}</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#151e2e] hover:bg-[#1e293b] text-xs font-medium text-slate-300 border border-[#1e293b] transition"
+          >
+            <Plus className="w-3.5 h-3.5 text-blue-400" />
+            <span>Add Repository</span>
+          </button>
+
+          <button
+            onClick={handleTriggerScan}
+            disabled={scanning || repositories.length === 0}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white transition shadow-sm disabled:opacity-50"
+          >
+            <Play className={`w-3.5 h-3.5 ${scanning ? "animate-spin" : ""}`} />
+            <span>{scanning ? "Scanning Archive..." : "Run AST Scan"}</span>
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -151,6 +199,39 @@ export default function CodeScannerPage() {
         </div>
       )}
 
+      {/* Repository Selector Bar */}
+      <div className="p-4 rounded-xl bg-[#0c121e] border border-[#1e293b] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <FolderGit2 className="w-4 h-4 text-slate-400 shrink-0" />
+          <span className="text-xs font-medium text-slate-300">Active Repository:</span>
+          {repositories.length === 0 ? (
+            <span className="text-xs text-amber-400 font-mono">No repositories registered yet</span>
+          ) : (
+            <select
+              value={selectedRepo}
+              onChange={(e) => setSelectedRepo(e.target.value)}
+              className="px-3 py-1.5 rounded-lg bg-[#151e2e] border border-[#1e293b] text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+            >
+              {repositories.map((repo) => (
+                <option key={repo.id} value={repo.id}>
+                  {repo.name} ({repo.repo_url})
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {selectedRepo && (
+          <div className="text-[11px] text-slate-400 flex items-center gap-2 font-mono">
+            <GitBranch className="w-3.5 h-3.5 text-blue-400" />
+            <span>
+              branch:{" "}
+              {repositories.find((r) => r.id === selectedRepo)?.default_branch || "main"}
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div className="p-5 rounded-xl bg-[#0c121e] border border-[#1e293b]">
@@ -166,7 +247,7 @@ export default function CodeScannerPage() {
         <div className="p-5 rounded-xl bg-[#0c121e] border border-[#1e293b]">
           <span className="text-xs font-semibold uppercase text-slate-400">Historical Scans</span>
           <div className="text-2xl font-bold text-emerald-400 mt-2">{scans.length}</div>
-          <p className="text-[11px] text-slate-500 mt-1">100% completed without execution risk</p>
+          <p className="text-[11px] text-slate-500 mt-1">Safe execution with zero code execution</p>
         </div>
       </div>
 
@@ -191,7 +272,9 @@ export default function CodeScannerPage() {
 
         {filteredReferences.length === 0 ? (
           <div className="text-center py-12 text-slate-500 text-xs">
-            No code references discovered yet. Click &quot;Run AST Scan&quot; to analyze your repository.
+            {repositories.length === 0
+              ? 'No repositories registered. Click "Add Repository" to connect a GitHub repository or use the companion CLI.'
+              : 'No code references discovered yet. Select a repository and click "Run AST Scan" to analyze source code.'}
           </div>
         ) : (
           <div className="divide-y divide-[#1e293b] overflow-x-auto">
@@ -225,6 +308,105 @@ export default function CodeScannerPage() {
           </div>
         )}
       </div>
+
+      {/* Add Repository Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-xl bg-[#0c121e] border border-[#1e293b] p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-[#1e293b]">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <FolderGit2 className="w-4 h-4 text-purple-400" />
+                <span>Register Code Repository</span>
+              </h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-white transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddRepository} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  Repository Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. web-storefront or api-gateway"
+                  value={newRepoName}
+                  onChange={(e) => setNewRepoName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-[#151e2e] border border-[#1e293b] text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">
+                  GitHub URL (HTTPS only)
+                </label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://github.com/organization/repo"
+                  value={newRepoUrl}
+                  onChange={(e) => setNewRepoUrl(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-[#151e2e] border border-[#1e293b] text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Public repositories or private repositories authorized with GITHUB_TOKEN.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    Default Branch
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="main"
+                    value={newRepoBranch}
+                    onChange={(e) => setNewRepoBranch(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-[#151e2e] border border-[#1e293b] text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    Primary Language
+                  </label>
+                  <select
+                    value={newRepoLang}
+                    onChange={(e) => setNewRepoLang(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-[#151e2e] border border-[#1e293b] text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="typescript">TypeScript / JS</option>
+                    <option value="python">Python</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#1e293b]">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingRepo}
+                  className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-medium text-white transition disabled:opacity-50"
+                >
+                  {addingRepo ? "Registering..." : "Register Repository"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

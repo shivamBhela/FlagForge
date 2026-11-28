@@ -136,11 +136,14 @@ export const api = {
       }),
   },
   flagsmith: {
-    testConnection: (payload: { api_url: string; token: string; connection_type?: string }) =>
-      apiFetch<{ ok: boolean; message: string; projects_count: number; latency_ms: number }>("/api/v1/flagsmith/test", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }),
+    testConnection: (orgId: string, payload: { api_url: string; token: string; connection_type?: string }) =>
+      apiFetch<{ ok: boolean; message: string; projects_count: number; latency_ms: number }>(
+        `/api/v1/flagsmith/organizations/${orgId}/test`,
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      ),
     listConnections: (orgId: string) =>
       apiFetch<any[]>(`/api/v1/flagsmith/organizations/${orgId}/flagsmith/connections`),
     createConnection: (orgId: string, payload: { name: string; api_url: string; token: string; connection_type: string; webhook_secret?: string }) =>

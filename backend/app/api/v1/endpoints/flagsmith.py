@@ -40,11 +40,16 @@ from app.core.config import settings
 router = APIRouter()
 
 
+@router.post("/organizations/{org_id}/test", response_model=FlagsmithTestConnectionResponse)
 @router.post("/test", response_model=FlagsmithTestConnectionResponse)
 async def test_flagsmith_connection(
     request: FlagsmithTestConnectionRequest,
+    membership: Annotated[OrganizationMember, Depends(require_org_admin)],
+    org_id: Optional[uuid.UUID] = None,
 ):
-    """Tests Flagsmith instance reachability and credential validity before saving."""
+    """Tests Flagsmith instance reachability and credential validity before saving.
+    Requires authenticated user with Org Admin role and organization context.
+    """
     try:
         # Validate URL against SSRF
         validate_target_url(request.api_url, allowed_private_hosts=settings.FLAGSMITH_ALLOWED_HOSTS)

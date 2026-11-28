@@ -33,7 +33,7 @@ async def list_repositories(
     membership: Annotated[OrganizationMember, Depends(require_org_member)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    stmt = select(Repository).where(Repository.organization_id == org_id)
+    stmt = select(Repository).where(Repository.organization_id == org_id).order_by(Repository.created_at.desc())
     repos = (await db.execute(stmt)).scalars().all()
     return repos
 
@@ -48,15 +48,57 @@ async def create_repository(
     repo = Repository(
         organization_id=org_id,
         project_id=repo_in.project_id,
-        name=repo_in.name,
-        repo_url=repo_in.repo_url,
-        default_branch=repo_in.default_branch,
-        language=repo_in.language,
+        name=repo_in.name.strip(),
+        repo_url=repo_in.repo_url.strip(),
+        default_branch=repo_in.default_branch.strip() or "main",
+        language=repo_in.language.strip() or "typescript",
     )
     db.add(repo)
     await db.commit()
     await db.refresh(repo)
     return repo
+
+
+@router.get("/organizations/{org_id}/repositories/{repo_id}")
+async def get_repository(
+    org_id: uuid.UUID,
+    repo_id: uuid.UUID,
+    membership: Annotated[OrganizationMember, Depends(require_org_member)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    stmt = select(Repository).where(
+        Repository.id == repo_id,
+        Repository.organization_id == org_id,
+    )
+    repo = (await db.execute(stmt)).scalar_one_or_none()
+    if not repo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Repository not found in this organization",
+        )
+    return repo
+
+
+@router.delete("/organizations/{org_id}/repositories/{repo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_repository(
+    org_id: uuid.UUID,
+    repo_id: uuid.UUID,
+    membership: Annotated[OrganizationMember, Depends(require_org_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    stmt = select(Repository).where(
+        Repository.id == repo_id,
+        Repository.organization_id == org_id,
+    )
+    repo = (await db.execute(stmt)).scalar_one_or_none()
+    if not repo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Repository not found in this organization",
+        )
+    await db.delete(repo)
+    await db.commit()
+    return None
 
 
 @router.post("/organizations/{org_id}/repositories/{repo_id}/scan")
@@ -67,6 +109,18 @@ async def trigger_scan(
     membership: Annotated[OrganizationMember, Depends(require_org_member)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    # Verify repository exists and belongs to this organization (IDOR protection)
+    stmt = select(Repository).where(
+        Repository.id == repo_id,
+        Repository.organization_id == org_id,
+    )
+    repo = (await db.execute(stmt)).scalar_one_or_none()
+    if not repo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Repository not found in this organization",
+        )
+
     scanner = CodeScanner(db=db, organization_id=org_id)
     scan = await scanner.execute_scan(
         repository_id=repo_id,

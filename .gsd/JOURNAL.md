@@ -108,3 +108,31 @@ Perform comprehensive final production-readiness audit across all 15 dimensions 
 - ✅ Verified Alembic continuous migration tree (`003_full_platform_schema` head).
 - ✅ Verified all 19 automated tests passing with zero failures.
 - ✅ Verified Next.js production build compiling all 20 pages with zero errors.
+
+---
+
+### Session: 2026-11-28 18:45
+#### Objective
+Execute comprehensive engineering remediation master prompt across branch `fix/flagforge-engineering-remediation`:
+- Remediate Code Scanner: eliminate hardcoded fake snippets; implement real public and authorized private GitHub zipball extraction with full archive security; native Python AST without regex fallback on syntax errors; JS/TS comment stripping without line shift; clean repository registration in frontend.
+- Security Fixes: secure `/api/v1/flagsmith/test` with authentication, org context, and Org Admin role; prevent scanner repository IDOR; enforce numerical validation on `RolloutPolicy`; defend risk arithmetic against zero division, NaN, and Inf.
+- Dependency Intelligence: evidence-based service attribution and idempotent graph rebuilds removing obsolete inferred edges.
+- Honest Placeholders: synthetic simulation semantics in Chaos Lab, advisory-only AI explanation, draft diff previews in Cleanup Studio, guarded rollback in Release Guardian.
+- Companion CLI & Tests: verify CLI suite and expand automated backend test suite.
+
+#### Accomplished & Verified
+- ✅ Replaced fallback sample snippets in `scanner.py` with secure live GitHub zipball download (`fetch_public_github_zip`) and in-memory safe extraction (`extract_source_files_from_zip`).
+- ✅ Enforced strict archive security: whitelist of redirect domains, 50MB size limit, zip traversal (zip-slip) rejection, symlink and binary exclusion.
+- ✅ Python AST visitor parses symbols and scopes; syntax errors log warnings and return cleanly without regex fallback.
+- ✅ Implemented `strip_comments_preserving_lines` for TypeScript/JavaScript to prevent commented-out code from generating false-positive flag references.
+- ✅ Updated `frontend/src/app/scanner/page.tsx`: removed auto-demo repository creation; added repository registration modal, selector, and real scan trigger.
+- ✅ Hardened `/api/v1/flagsmith/test` and `/api/v1/flagsmith/organizations/{org_id}/test` with `require_org_admin` dependency; updated frontend API and integrations page.
+- ✅ Added tenant ownership check in `trigger_scan`, `get_repository`, and `delete_repository` returning 404 on cross-organization access.
+- ✅ Added Pydantic field validators and weight sum validator on `PolicyUpdate` in `guardian.py`.
+- ✅ Added defensive division and NaN/Inf guards in `risk_engine.py`.
+- ✅ Enhanced `dependency_engine.py` with `infer_service_from_path`, `infer_component_from_path`, and idempotent graph rebuilds removing stale `INFERRED` edges while preserving manual `EXPLICIT` edges.
+- ✅ Updated `seed.py` to pass explicit synthetic demo fixtures to `execute_scan`.
+- ✅ Added `test_remediation_security_and_scanner.py` covering all remediation requirements.
+- ✅ Verified backend test suite: **65 passed in 38s** (zero failures).
+- ✅ Verified CLI test suite: **12 passed in 0.2s** (zero failures).
+- ✅ Verified frontend production build: **20/20 routes generated cleanly** via Turbopack and TypeScript.
