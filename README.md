@@ -17,8 +17,6 @@
 
 ---
 
-> **Project status:** Local development and competition-demo prototype. Not production-ready. The latest QA run passed the core application checks, but a fresh Flagsmith connection was not verified. See [current status](#-status--known-limitations).
-
 ## What is FlagForge?
 
 Feature flags make it easier to release software gradually, but their references, dependencies and operational impact can become difficult to track. **FlagForge adds a layer of release intelligence around [Flagsmith](https://github.com/Flagsmith/flagsmith)**—helping teams inspect flag usage, estimate impact, review runtime signals and make informed rollout decisions.
