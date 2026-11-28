@@ -1,7 +1,7 @@
 # FlagForge Final Competition Readiness Report
 
 **Assessment date:** 2026-11-28
-**Verdict:** The latest headed Chromium E2E passes against the rebuilt Compose frontend and PostgreSQL-backed API (1 test, 22.3 seconds); the Full Compose profile and migrations are healthy. Backend pytest passed (46), CLI tests passed (12), and Redis-backed login throttling passed a live local request check. Fresh live Flagsmith authentication and synchronization were not verified in this run; prior isolated live Staging sync/webhook evidence is historical. Public hosting is paused at the user's zero-cost direction. FlagForge is **not production-ready**. See the root `FINAL_COMPETITION_READINESS_REPORT.md` for the full requirement-by-requirement status.
+**Verdict:** Fresh local checks on 2026-11-28: headed Playwright passed (1 workflow, 19.8 seconds; 25.6 seconds total), backend pytest passed (46), CLI pytest passed (12), frontend lint/type/build passed, npm audit reported zero vulnerabilities, all ten long-running Compose services were healthy, both migration jobs exited 0, and Alembic current/head match `009_encrypt_webhook_secrets`. Docker Desktop/WSL briefly stalled during manual QA; restarting the engine recovered the same stack without volume loss. Fresh live Flagsmith auth/synchronization were not verified in this run; prior isolated live Staging sync/webhook evidence remains historical. Public hosting is excluded by user direction. FlagForge is **not production-ready**. See the root `FINAL_COMPETITION_READINESS_REPORT.md` for the full requirement-by-requirement status.
 
 **Acceptance checklist estimate:** 75% (16 PASS, 4 PARTIAL, 0 NOT IMPLEMENTED, 4 BLOCKED; PASS = 1, PARTIAL = 0.5, other statuses = 0 across 24 equally weighted items). This is a delivery estimate, not a production-readiness score.
 
@@ -17,10 +17,10 @@
 | Database | **Passed (current)** | PostgreSQL is healthy; Alembic current is `009_encrypt_webhook_secrets (head)`. |
 | Authentication | **Passed (current Compose run)** | Headed Chromium registered and logged in against the Compose/PostgreSQL-backed API; persistence survived reload and logout/login. |
 | Frontend routes | **Passed** | Headed Chromium exercised all 18 route experiences beyond initial loading. |
-| Browser workflows | **Passed (latest Compose run)** | 1 headed Playwright test passed in 22.3s after rebuilding the API with login throttling: invalid forms, registration, persistence, CRUD, all 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitoring, Guardian safety output, incident empty states, cleanup preview, integration validation and 390px mobile layout. No unexpected failed requests. Screenshots are in ignored `frontend/test-results/`. |
+| Browser workflows | **Passed (fresh Compose run)** | 1 headed Playwright workflow passed in 19.8s (25.6s total): invalid forms, registration/login, persistence, org/project/environment CRUD, 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitor, Guardian safety output, incident empty states, cleanup draft, integration validation and 390px mobile layout. No page errors, HTTP 5xx or unexpected failed requests. Evidence screenshots and log are in ignored `artifacts/evidence/playwright/`. |
 | ESLint | **Passed** | All 34 previously recorded project findings were corrected; full frontend lint reports zero errors/warnings. |
 | Clean-checkout installation | **Passed** | Fresh clone of committed `acd08d4`, isolated Compose project and volumes, documented setup, successful migrations/health checks, and headed browser workflow passed. Same host; no second-machine claim. |
-| Flagsmith live connection | **Previously live-verified; not reverified this run** | Official pinned local 2.295.2 Management API. Earlier QA verified project/environment/flag discovery and synchronization; latest fresh authentication/sync was not run. |
+| Flagsmith live connection | **Not freshly verified** | Current browser shows no connected Flagsmith instance and Integration form validation was exercised without sending a provider request. Earlier local 2.295.2 Management API discovery/sync evidence is historical; no fresh provider auth or sync was performed. |
 | Synchronization | **Previously live-verified; not reverified this run** | Earlier QA detected a real Staging test-flag state change; Development and Production were not modified. Latest run did not repeat the sync. |
 | Webhooks | **Previously live-verified locally** | Earlier QA processed a signed provider test event and two real Staging flag changes (enable/restore). Test flag was restored disabled; temporary webhook removed; signing secret cleared. Provider retry/outage behavior unverified; no new event was sent this run. |
 | Chaos Lab | **Synthetic / demo only** | Browser scenario explicitly identifies synthetic Staging simulation; no load, no provider mutation. |
@@ -40,14 +40,14 @@
 - `npx tsc --noEmit` — passed.
 - `npm run build` — passed; Next.js 16.4.6 generated 20 application routes.
 - `npm audit` and `npm audit --omit=dev` — zero vulnerabilities.
-- `npm run test:e2e -- --headed` — 1 passed in 22.3s against the Compose frontend and PostgreSQL-backed API after the API rebuild; screenshots are in ignored `frontend/test-results/`.
+- `PW_HEADLESS=0 npm run test:e2e` — 1 passed in 19.8s (25.6s total) against the Compose frontend and PostgreSQL-backed API; fresh screenshots and raw output are in ignored `artifacts/evidence/playwright/`.
 - `npm run lint` — passed with zero project findings after fixing the 34 findings previously recorded; see [end-to-end report](END_TO_END_TEST_REPORT.md).
 - `python -m unittest discover -s cli/tests -v` — 12 passed; environment-diff provider responses are mocked, live comparison was not run.
 - Fresh checkout `C:\Users\unbel\Downloads\FlagForge_CleanInstall_QA`: documented `setup.ps1` and headed browser test passed using independent Compose-scoped volumes.
 
 Browser screenshots and Playwright traces are in the ignored `frontend/test-results/` and `frontend/playwright-report/` folders. No credentials or generated secrets are committed.
 
-Latest reruns: backend pytest passed (46); CLI tests passed (12); frontend lint, TypeScript, production build and npm audits passed; headed Compose-backed Playwright passed (1 in 22.3s); real Redis-backed login throttling returned 8x401 then 429 with `Retry-After`; ten services and both migrations are healthy. Fresh local Flagsmith authentication was rejected; earlier isolated Staging sync/webhook evidence remains the latest live provider round trip. Backend Docker build context is now 28.97 KB (was 116.82 MB) after excluding the Windows virtual environment. `DOCKER_SETUP.md` documents safe database backups and isolated restore verification; restore was not exercised.
+Latest fresh reruns: backend pytest passed (46, 21.84s, one upstream warning); CLI pytest passed (12, 0.19s); frontend lint, TypeScript, production build (20 routes) and npm audit (zero vulnerabilities) passed; headed Compose-backed Playwright passed (1 in 19.8s, 25.6s total); Full profile health passed with 10 healthy services and both migrations exited 0; Alembic current/head matched `009_encrypt_webhook_secrets`. The Docker Desktop/WSL engine stalled temporarily and recovered after restart with volumes preserved. Fresh local Flagsmith authentication/sync was not attempted in this run; earlier isolated Staging sync/webhook evidence remains historical. Backend Docker build context is now 28.97 KB (was 116.82 MB) after excluding the Windows virtual environment. `DOCKER_SETUP.md` documents safe database backups and isolated restore verification; the isolated restore drill is historical, not part of this latest run.
 
 ## Findings by severity
 
@@ -81,3 +81,7 @@ Latest reruns: backend pytest passed (46); CLI tests passed (12); frontend lint,
 - **Disabled:** remote rollback.
 
 Full evidence and remaining gaps are tracked in the [end-to-end test report](END_TO_END_TEST_REPORT.md), [known limitations](KNOWN_LIMITATIONS.md), [installation verification report](INSTALLATION_VERIFICATION_REPORT.md) and [security review](SECURITY_REVIEW.md).
+
+## Local evidence and demo recording
+
+Fresh local logs and headed Playwright screenshots are indexed in `../artifacts/evidence/EVIDENCE_INDEX.md` (ignored by Git). The genuine local no-voice recording is `../artifacts/demo/FlagForge_Competition_Demo_NoVoice.mp4`; see `../artifacts/demo/VIDEO_SHOTLIST.md`. It is 240 seconds, 1920×1080 at 30 FPS with no audio stream. The terminal segment is omitted because the supported computer-use interface refused to launch PowerShell; actual CLI logs are available in the evidence bundle.

@@ -4,6 +4,8 @@
 **Targets:** Current headed browser run against the Windows Docker Desktop Compose deployment at `http://localhost:3000`, with the API backed by PostgreSQL.
 **Data scope:** The E2E run created a disposable FlagForge account, organization, project, environment and synthetic fixtures in the existing local QA database. It did not alter any Flagsmith provider data. Existing named Docker volumes were preserved.
 
+**Fresh run note (2026-11-28):** After a temporary Docker Desktop/WSL engine stall, Docker Desktop was restarted without deleting volumes. The same stack recovered. Fresh reruns: backend pytest 46 passed (21.84s, one upstream warning); CLI pytest 12 passed (0.19s); frontend lint, TypeScript and production build passed (20 routes); `npm audit --audit-level=low` found 0 vulnerabilities; headed Playwright 1 passed (19.8s test, 25.6s total); Full-profile health passed with 10/10 long-running services healthy, both migration jobs exit 0, HTTP checks passing and Alembic current/head `009_encrypt_webhook_secrets`. The fresh browser workflow used synthetic local fixtures; no Flagsmith instance was connected or synchronized. See ignored local evidence at `../artifacts/evidence/` and the evidence index at `../artifacts/evidence/EVIDENCE_INDEX.md`.
+
 ## Commands and results
 
 | Check | Status | Evidence |
@@ -21,12 +23,12 @@
 | Headed Playwright Chromium | **Passed** | 1 end-to-end workflow passed against the rebuilt production container and again against a fresh isolated checkout. |
 | Clean-checkout installation | **Passed** | Committed `acd08d4` cloned separately, documented `setup.ps1` built and started the stack with a distinct Compose name/volumes; all service and HTTP health checks passed. |
 | `npm run lint` | **Passed** | All 34 previously recorded findings were fixed; no rule suppression or configuration weakening. |
-| Latest headed Playwright run | **Passed (latest Compose run)** | 1 test passed in 22.3 seconds after rebuilding the API with login throttling. Invalid-form validation, registration/login, org/project/environment CRUD, 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, 390px mobile width, logout/login and persistence passed. No page errors, HTTP 5xx or unexpected failed requests; navigation cancellations are separately recorded. |
+| Latest headed Playwright run | **Passed (fresh Compose run, 2026-11-28)** | 1 test passed in 19.8 seconds (25.6 seconds total). Invalid-form validation, registration/login, org/project/environment CRUD, 18 route experiences, synthetic Chaos, flag/scanner search, dependency-map refresh, Staging monitoring refresh, Guardian safety output, incident empty states, cleanup draft preview, integration form validation, 390px mobile width, logout/login and persistence passed. No page errors, HTTP 5xx or unexpected failed requests; navigation cancellations are separately recorded. Raw output and 19 screenshots are in ignored `artifacts/evidence/playwright/`. |
 | Latest Docker status check | **Passed** | Ten long-running services healthy; both one-shot migrations exited 0; Alembic `009_encrypt_webhook_secrets (head)`; Full profile health and HTTP checks passed. |
 | Docker memory snapshot | **Passed (point-in-time)** | Latest `docker stats --no-stream` measured approximately 0.98 GiB across ten running services against the 3.67 GiB Docker VM limit; this was not a peak/load/soak measurement. |
 | Companion CLI unit tests | **Passed (latest; diff responses mocked)** | `python -m unittest discover -s cli/tests -v`: 12 passed, including environment diff classification, duplicate/same-environment rejection, no-input handling and provider error redaction. |
 | Latest frontend lint/type/build | **Passed** | `npm run lint`, `npx tsc --noEmit`, and `npm run build` exited 0; build generated 20 routes (19 static, one dynamic project-detail route). Full and production-only `npm audit` each reported zero vulnerabilities. |
-| GitHub Actions CI | **Passed (hosted)** | Run 46127083645 completed successfully for commit `1e9a3f2cd1856eefc7ca4235967a3517ae57f7aa`; backend, CLI, frontend, audits and Compose config jobs passed. |
+| GitHub Actions CI | **Passed (hosted, latest published commit at inspection)** | Run 46127284357 completed successfully for published commit `5debbcefd85b80838d29c241c2d10e63d5725b6a`. This run predates the local documentation-only changes in this report update; no CI claim is made for the not-yet-published working tree. |
 
 ## Browser workflow
 
@@ -44,7 +46,7 @@ Screenshots, traces and test output are in the ignored `frontend/test-results/` 
 
 The earlier Docker-backed registration request remained pending during the Flagsmith/Gunicorn memory failure. The current Compose-backed browser pass verifies registration no longer hangs on the running stack. No unexpected failed network requests occurred; route-change `ERR_ABORTED` cancellations were treated as expected. It does not verify a new live provider session; the single fresh login attempt to the local Flagsmith UI using the supplied account was rejected. No repeated attempts were made.
 
-The fresh isolated checkout at `C:\Users\unbel\Downloads\FlagForge_CleanInstall_QA` also passed the headed Playwright run (1 passed, 32.6 seconds). The default project's named volumes were preserved; the fresh checkout created a separate set of volumes. Both installs ran on the same Windows/Docker Desktop host.
+The fresh isolated checkout at `C:\Users\unbel\Downloads\FlagForge_CleanInstall_QA` also passed the headed Playwright run historically (1 passed, 32.6 seconds). The default project's named volumes were preserved; the fresh checkout created a separate set of volumes. Both installs ran on the same Windows/Docker Desktop host. In this latest run, the same existing stack recovered from a temporary Docker Desktop/WSL stall after an engine restart; no volumes or database contents were reset.
 
 The read-only CLI environment diff has mocked response coverage only; no source/target environment keys were supplied for a live comparison. Current QA did not reconnect to Flagsmith; the earlier local Management API and Staging webhook/sync results below are historical live evidence. Safe database backup and isolated restore instructions are documented in `DOCKER_SETUP.md`; a restore drill was not performed.
 
