@@ -3,6 +3,8 @@
 **Assessment date:** 2026-11-28
 **Verdict:** Fresh local checks on 2026-11-28: headed Playwright passed (1 workflow, 19.8 seconds; 25.6 seconds total), backend pytest passed (46), CLI pytest passed (12), frontend lint/type/build passed, npm audit reported zero vulnerabilities, all ten long-running Compose services were healthy, both migration jobs exited 0, and Alembic current/head match `009_encrypt_webhook_secrets`. Docker Desktop/WSL briefly stalled during manual QA; restarting the engine recovered the same stack without volume loss. Fresh live Flagsmith auth/synchronization were not verified in this run; prior isolated live Staging sync/webhook evidence remains historical. Public hosting is excluded by user direction. FlagForge is **not production-ready**. See the root `FINAL_COMPETITION_READINESS_REPORT.md` for the full requirement-by-requirement status.
 
+**Local interactive demo readiness:** 90% (9/10 areas; live Flagsmith Management API connection is blocked). This is distinct from the 24-category checklist score below.
+
 **Acceptance checklist estimate:** 77.1% (16 PASS, 5 PARTIAL, 3 BLOCKED; 18.5/24 points at equal weighting, PASS = 1, PARTIAL = 0.5, BLOCKED = 0). The recalculated 24-category basis and limits are itemized in the [root QA report](../FINAL_COMPETITION_READINESS_REPORT.md). This is a local QA completion measure, not a production-readiness score.
 
 ## Test area status

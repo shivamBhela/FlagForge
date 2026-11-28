@@ -12,6 +12,8 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 
 ## Completion estimate
 
+**Local interactive demo readiness: 90% (9/10 areas).** Docker/migrations, auth and persistence, org/project/environments, navigation/routes, scanner/dependency graph, Risk/Guardian, synthetic Chaos safety, Monitor/incidents, and Cleanup preview passed. A fresh Flagsmith Management API connection is blocked, so live provider discovery/sync is the remaining interactive demo gap. This local-demo measure does not assess production readiness.
+
 **Recalculated local QA checklist: 77.1% (18.5/24 points).** Each of the following 24 categories is equally weighted: PASS = 1, PARTIAL = 0.5, BLOCKED = 0. Current tally is 16 PASS, 5 PARTIAL, and 3 BLOCKED (no NOT IMPLEMENTED category). This is an explicit local QA completion measure, not a competition judging result or production-readiness score.
 
 | # | Acceptance area | Status | Evidence / limitation |
