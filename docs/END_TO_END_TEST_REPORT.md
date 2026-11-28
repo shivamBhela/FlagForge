@@ -28,7 +28,7 @@
 | Docker memory snapshot | **Passed (point-in-time)** | Latest `docker stats --no-stream` measured approximately 0.98 GiB across ten running services against the 3.67 GiB Docker VM limit; this was not a peak/load/soak measurement. |
 | Companion CLI unit tests | **Passed (latest; diff responses mocked)** | `python -m unittest discover -s cli/tests -v`: 12 passed, including environment diff classification, duplicate/same-environment rejection, no-input handling and provider error redaction. |
 | Latest frontend lint/type/build | **Passed** | `npm run lint`, `npx tsc --noEmit`, and `npm run build` exited 0; build generated 20 routes (19 static, one dynamic project-detail route). Full and production-only `npm audit` each reported zero vulnerabilities. |
-| GitHub Actions CI | **Passed (hosted, latest published commit at inspection)** | Run 46127284357 completed successfully for published commit `5debbcefd85b80838d29c241c2d10e63d5725b6a`. This run predates the local documentation-only changes in this report update; no CI claim is made for the not-yet-published working tree. |
+| GitHub Actions CI | **Passed (hosted)** | Run 46136020658 completed successfully for published commit `ee06fbba1b2285fdf9997e68a3e2663991e7b7f6`, including the QA report and `.gitignore` updates. The additional CI-note wording in this follow-up is documentation-only. |
 
 ## Browser workflow
 
