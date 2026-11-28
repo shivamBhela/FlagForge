@@ -139,7 +139,7 @@ FlagForge has working dashboard/backend capabilities and a Python companion CLI 
 | Compose profile selection | PASS (static) | `docker compose config --quiet` plus service-list checks for default/Core, Dashboard, Observability and Full. Engine was not needed for config validation. |
 | Docker/migrations | PASS (current runtime) | Ten long-running services healthy; both one-shot migrations exited 0; Alembic `009_encrypt_webhook_secrets (head)`; Full profile HTTP checks passed. |
 | GitHub publication | PASS | Remote branch SHA matches local. PR #1 is an open draft against `main`; no merge. |
-| GitHub Actions CI | ADDED, NOT YET RUN | `.github/workflows/ci.yml` checks backend, CLI, frontend, audits and Compose config on pushes/PRs. No hosted run has been observed yet. |
+| GitHub Actions CI | PASS (hosted) | Run 46127083645 completed successfully for commit `1e9a3f2cd1856eefc7ca4235967a3517ae57f7aa`; backend, CLI, frontend, audits and Compose config jobs passed. |
 
 ## 17. Known issues and limitations
 

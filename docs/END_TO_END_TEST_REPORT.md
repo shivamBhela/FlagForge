@@ -26,7 +26,7 @@
 | Docker memory snapshot | **Passed (point-in-time)** | Latest `docker stats --no-stream` measured approximately 0.98 GiB across ten running services against the 3.67 GiB Docker VM limit; this was not a peak/load/soak measurement. |
 | Companion CLI unit tests | **Passed (latest; diff responses mocked)** | `python -m unittest discover -s cli/tests -v`: 12 passed, including environment diff classification, duplicate/same-environment rejection, no-input handling and provider error redaction. |
 | Latest frontend lint/type/build | **Passed** | `npm run lint`, `npx tsc --noEmit`, and `npm run build` exited 0; build generated 20 routes (19 static, one dynamic project-detail route). Full and production-only `npm audit` each reported zero vulnerabilities. |
-| GitHub Actions CI | **Added, not yet run** | `.github/workflows/ci.yml` checks backend, CLI, frontend, audits and Compose config. A hosted run has not been observed. |
+| GitHub Actions CI | **Passed (hosted)** | Run 46127083645 completed successfully for commit `1e9a3f2cd1856eefc7ca4235967a3517ae57f7aa`; backend, CLI, frontend, audits and Compose config jobs passed. |
 
 ## Browser workflow
 
