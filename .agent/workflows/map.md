@@ -34,25 +34,9 @@ This workflow should be run BEFORE `/plan` on brownfield projects to give the pl
 
 <process>
 
-## 0. Delegate the Mapping
+## 0. Optional Mapping Helper
 
-**If `invoke_subagent` is available**, invoke `gsd-researcher` with workspace mode `share`:
-
-```
-mode: map
-
-Write .gsd/ARCHITECTURE.md and .gsd/STACK.md.
-Cite findings with file:line. Record what you could not determine.
-Return the compact digest from your Return Contract — nothing else.
-```
-
-Mapping is the single most context-expensive workflow in GSD — it reads the whole project by
-design. Running it inline means the codebase you just mapped is now competing for space with
-the phase you wanted to plan. Delegate it, then read the artifacts only when you need them.
-
-Skip to step 8 (Update State) once the digest comes back.
-
-Steps 1-7 describe what the researcher does. Run them yourself only in inline mode.
+Mapping may be performed directly. Use gsd-researcher only when requested or when a separate research context materially helps.
 
 ---
 

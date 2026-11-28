@@ -14,8 +14,8 @@ Establish the foundational monorepo structure, FastAPI application with versione
 Load these files for context:
 - .gsd/SPEC.md
 - .gsd/REQUIREMENTS.md
-- FLAGFORGE_FULL_BUILD_PROMPT.md
-- README_SELF_HOSTED.md
+- docs/archive/ORIGINAL_BUILD_PROMPT.md (historical specification)
+- docs/SELF_HOSTED_QUICKSTART.md
 
 ## Tasks
 

@@ -125,20 +125,11 @@ The stop script preserves data. **Do not use `docker compose down -v` unless you
 3. In Flagsmith **Organization Settings → API Access**, create an Organization Management API key.
 4. In FlagForge, open **Integrations**, select **Flagsmith Local**, enter the internal Compose service API address configured by the example environment, test the connection and sync.
 
-The Organization Management API key is different from an environment SDK key and a dashboard password. Keep credentials out of source code and browser-visible variables. Follow the [Flagsmith setup guide](docs/FLAGSMITH_SETUP.md).
+The Organization Management API key is different from an environment SDK key and a dashboard password. Keep credentials out of source code and browser-visible variables. Follow the [self-hosted quickstart](docs/SELF_HOSTED_QUICKSTART.md) and [Flagsmith setup guide](docs/FLAGSMITH_SETUP.md).
 
 ## Companion CLI
 
-The companion CLI delegates supported provider commands to the official Flagsmith CLI and adds local source scanning. It is **not** an official Flagsmith plugin or fork.
-
-```powershell
-python -m pip install -e .\cli
-flagforge --help
-flagforge doctor
-flagforge scan .
-```
-
-CLI sync is dry-run only; environment comparison is read-only. See the [CLI guide](cli/README.md) for commands and boundaries.
+The companion CLI is developed on the separate [completion/final-readiness branch](https://github.com/shivamBhela/FlagForge/tree/completion/final-readiness/cli); it is not present on `main` yet. Its sync is dry-run only and its environment comparison is read-only. See the [CLI guide](https://github.com/shivamBhela/FlagForge/blob/completion/final-readiness/cli/README.md) for commands and boundaries.
 
 ## Testing
 
@@ -157,25 +148,23 @@ npm run build
 npm run test:e2e -- --headed
 ```
 
-CLI tests: `python -m unittest discover -s cli/tests -v`. See the [end-to-end report](docs/END_TO_END_TEST_REPORT.md) for the recorded test evidence.
+The CLI test suite runs from the completion branch only; `main` does not include those source files or tests. See the [end-to-end report](docs/END_TO_END_TEST_REPORT.md) for the recorded test evidence and branch scope.
 
 ## Status & known limitations
 
-**Latest recorded QA: 28 November 2026.** This is a local verification snapshot, not a production-readiness score.
+**Latest recorded full-stack QA: 28 November 2026 on `completion/final-readiness` at commit `3d64c6d`.** This cleanup branch is based on `main` and does not include every change from that tested branch, so those results are historical and do not certify this branch. A fresh check on this branch passed backend pytest (35), TypeScript, production build (20 routes), `npm audit` (zero vulnerabilities) and `docker compose config --quiet`; frontend lint reports 34 findings. Docker health and migrations could not be checked because the Docker engine was unavailable. This snapshot is not a production-readiness score.
 
 | Check | Recorded result |
 |---|---|
 | Docker Full profile | 10 long-running services healthy; migrations passed |
-| Backend / CLI | 46 backend tests and 12 CLI tests passed |
-| Frontend | Lint, TypeScript, build passed; 20 routes generated |
-| Browser | 1 headed Playwright workflow passed; 18 route experiences covered |
-| Database | Alembic at `009_encrypt_webhook_secrets`; isolated restore drill passed |
-| Dependency audit | `npm audit`: 0 vulnerabilities in that run |
+| Latest full-stack QA (completion branch) | Backend 46 and CLI 12 passed; frontend lint/type/build passed; 1 headed Playwright workflow passed; Docker health and migrations passed |
+| Current hygiene branch checks | Backend 35 passed; TypeScript and production build passed (20 routes); `npm audit` reported 0 vulnerabilities; frontend lint failed with 34 findings; Docker health unavailable |
+| Database (historical full-stack QA) | Alembic at `009_encrypt_webhook_secrets`; isolated restore drill passed |
 
 **Important limitations:**
 - Fresh Flagsmith authentication and sync were not verified in the latest QA run. Earlier local Staging sync and webhook checks are historical, not fresh results.
 - Cleanup-to-GitHub-PR is implemented but only mock-tested for the app workflow; live GitHub credentials were not configured.
-- Latest browser session had no telemetry windows. Demo telemetry is not customer traffic; missing data must not be read as healthy.
+- The latest full-stack QA on the separate completion branch had no telemetry windows. The OTLP pipeline is implemented and automated-ingestion tested; earlier live pipeline verification used demo-app traffic, not customer traffic. Missing data must not be read as healthy.
 - Chaos Lab is synthetic and does not generate load or mutate Flagsmith.
 - Remote rollback is disabled; the endpoint returns `501` without provider mutation.
 - Production hosting, TLS, high availability, production load testing and independent security testing are not verified. Do not expose this local Compose setup publicly.
@@ -203,7 +192,7 @@ Use a dedicated demo Flagsmith organization, least-privilege credentials and sho
 
 ## Documentation
 
-[Architecture](docs/ARCHITECTURE.md) · [Docker setup](docs/DOCKER_SETUP.md) · [Flagsmith setup](docs/FLAGSMITH_SETUP.md) · [Integrations](docs/INTEGRATIONS.md) · [Security review](docs/SECURITY_REVIEW.md) · [CLI](cli/README.md) · [QA report](docs/FINAL_COMPETITION_READINESS_REPORT.md)
+[Architecture](docs/ARCHITECTURE.md) · [Docker setup](docs/DOCKER_SETUP.md) · [Local self-hosted quickstart](docs/SELF_HOSTED_QUICKSTART.md) · [Flagsmith setup](docs/FLAGSMITH_SETUP.md) · [Integrations](docs/INTEGRATIONS.md) · [Security review](docs/SECURITY_REVIEW.md) · [CLI guide on completion branch](https://github.com/shivamBhela/FlagForge/blob/completion/final-readiness/cli/README.md) · [QA report](docs/FINAL_COMPETITION_READINESS_REPORT.md)
 
 ---
 

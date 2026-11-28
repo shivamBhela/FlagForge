@@ -1,316 +1,108 @@
 <!-- GSD Project Profile: WEB -->
-# PROJECT_RULES.md — GSD Canonical Rules
+# PROJECT_RULES.md — Canonical Development Rules
 
-> **Single Source of Truth** for the Get Shit Done methodology.
-> 
-> Model-agnostic. All adapters and extensions reference this file.
+This file is the canonical, model-independent set of FlagForge development rules. Tool-specific workflows may add commands, but they must not contradict these rules.
 
----
+## Working approach
 
-## Core Protocol
+1. Read the user's request and the relevant repository state.
+2. Make one focused implementation plan per request when a plan is useful.
+3. Do not turn ordinary tasks into phases, waves, roadmaps, ceremonies or separate plans.
+4. Use a phased roadmap only when the user asks for it or the work is a genuinely large, multi-milestone effort with meaningful dependencies.
+5. Implement, verify empirically, report limitations and commit safely when requested or appropriate.
 
-**SPEC → PLAN → EXECUTE → VERIFY → COMMIT**
+A finalized specification is useful for a new project or a major milestone. It is not a gate for routine bug fixes, maintenance or focused changes.
 
-1. **SPEC**: Define requirements in `.gsd/SPEC.md` until status is `FINALIZED`
-2. **PLAN**: Decompose into phases in `.gsd/ROADMAP.md`, then detailed plans
-3. **EXECUTE**: Implement with atomic commits per task
-4. **VERIFY**: Prove completion with empirical evidence
-5. **COMMIT**: One task = one commit, message format: `type(scope): description`
+## Preserve behavior and user work
 
-**Planning Lock**: No implementation code until SPEC.md contains "Status: FINALIZED".
+- Inspect status and the relevant diff before editing.
+- Preserve unrelated working-tree changes, local configuration and existing data.
+- Never use destructive cleanup, reset, force-push or database/volume deletion unless explicitly authorized.
+- Keep secrets out of source control, logs, screenshots and frontend bundles.
+- Fix the smallest code path that addresses a verified defect.
+- Do not claim tests, integrations or deployments passed without current evidence.
 
----
+## Empirical verification
 
-## Proof Requirements
+Choose checks that prove the requested change:
 
-Every change requires verification evidence:
+| Change | Evidence |
+| --- | --- |
+| API behavior | Automated test or actual HTTP request and response |
+| UI behavior | Browser interaction and screenshot where useful |
+| Build or types | Actual command output |
+| Configuration | Parser, validator or runtime check |
+| Integration | Real external round trip; label mocks and historical results |
 
-| Change Type | Required Proof |
-|-------------|----------------|
-| API endpoint | curl/HTTP response |
-| UI change | Screenshot |
-| Build/compile | Command output |
-| Test | Test runner output |
-| Config | Verification command |
+Do not add or run unrelated tests just to inflate coverage. Report failures, skips and blocked checks accurately.
 
-**Never accept**: "It looks correct", "This should work", "I've done similar before".
+## Search-first reading
 
-**Always require**: Captured output, screenshot, or test result.
+- Search for references before moving or removing a file.
+- Read only relevant sections of large files until a full read is necessary.
+- Check references, relative links, tooling conventions and runtime use before changing repository structure.
 
----
+## Optional delegation
 
-## Search-First Discipline
+Subagents are optional helpers. Do not delegate by default, one per task or merely to create parallel activity. Work directly unless the user asks for delegation or the task has independent work that materially benefits from it and the available tools support it.
 
-**Before reading any file completely:**
+When delegation is used:
 
-1. **Search first** — Use grep, ripgrep, or IDE search to find relevant snippets
-2. **Evaluate snippets** — Determine if full file read is justified
-3. **Targeted reads** — Only read specific line ranges when needed
+- Give the helper a clear bounded task and relevant constraints.
+- Preserve workspace isolation for concurrent writers.
+- Review its actual changes and verification before accepting them.
+- Do not claim delegated work that did not happen.
 
-**Benefits:**
-- Reduces context pollution
-- Faster understanding of large codebases
-- Prevents reading irrelevant code
+The reusable delegation guidance is in .agents/skills/subagent-delegation/SKILL.md.
 
-**Anti-pattern**: Reading entire files "to understand the context" without searching first.
+## Plans, phases and parallel work
 
----
+A short plan may be useful for a multi-file change. Keep it focused on the requested outcome.
 
-## Delegation
+Phases, waves and roadmap artifacts are optional organizational tools for large milestones. For ordinary tasks, work through one plan directly. Within a large milestone, use dependency groups only when they clarify real ordering or safe parallel work; do not invent artificial groupings.
 
-**Rule:** Orchestrator workflows delegate the work and keep the routing.
+## State and notes
 
-Where `invoke_subagent` exists (Antigravity 2.0+), heavy work runs in a subagent with its own
-context. The orchestrator reads compact results only.
+Update .gsd/STATE.md when a substantial project decision or verified project state changes. Do not require a state snapshot after every task, commit or internal grouping. Keep historical notes labeled as historical and date current verification.
 
-| Work | Subagent |
-|------|----------|
-| Plan execution | `gsd-executor` (one per PLAN.md) |
-| Plan authoring | `gsd-planner` |
-| Phase verification | `gsd-verifier` |
-| Mapping and research | `gsd-researcher` |
-| Bug diagnosis | `gsd-debugger` |
+## Model-independent guidance
 
-**Non-negotiable:**
-- A subagent inherits **no** conversation history — put every needed fact in its prompt
-- Pass **paths**, never file contents
-- Never re-read an artifact a subagent already summarized just to confirm it
-- Where subagents are unavailable, say so out loud and degrade to one plan per session —
-  never claim delegation that did not happen
+Instructions describe capabilities and outcomes, not a required model, vendor or model tier. Optional tool-specific notes live in docs/development/ai-adapters/. They must not duplicate or override this file.
 
-Full protocol: `.agents/skills/subagent-delegation/SKILL.md`
+## Commits
 
----
+Use descriptive Conventional Commit messages when committing, such as chore(repo): clarify development documentation.
 
-## Wave Execution
+- Inspect staged changes before committing.
+- Stage only files related to the requested work.
+- Never commit credentials, local databases, recordings, screenshots or generated test data unless explicitly requested.
+- Verify the new commit and remote result when publishing.
+- Do not force-push or merge unless explicitly authorized.
 
-Plans are grouped into **waves** based on dependencies:
+## Shell and platform support
 
-| Wave | Characteristic | Execution |
-|------|----------------|-----------|
-| 1 | Foundation tasks, no dependencies | Run in parallel |
-| 2 | Depends on Wave 1 | Wait for Wave 1, then parallel |
-| 3 | Depends on Wave 2 | Wait for Wave 2, then parallel |
+Workflows should prefer portable commands or show correct PowerShell and POSIX examples. Run one shell command at a time where shell parsing or side effects could make chaining ambiguous. Inspect exit codes and output before treating a command as successful.
 
-**Parallelism is real only with subagents.** A wave with multiple plans runs one
-`gsd-executor` per plan in `branch` workspace mode (isolated git worktrees), merged when the
-wave closes. Without subagents, a "wave" degrades to sequential execution in one context —
-plan it as such.
+## Repository structure
 
-**Wave Completion Protocol:**
-1. All tasks in wave verified
-2. State snapshot created
-3. Commit all wave work
-4. Update STATE.md with position
+- PROJECT_RULES.md: canonical development rules
+- .agent/workflows/: Antigravity slash-command workflows
+- .agents/agents/ and .agents/skills/: optional agents and reusable skills
+- .gemini/: Gemini-specific guidance
+- .gsd/: project state, requirements, roadmap and historical plans
+- docs/development/: development conventions and AI tooling notes
+- docs/archive/: clearly labeled historical material
+- backend/, frontend/, demo-app/, scripts/: application and operational code
+- docs/: setup, architecture, security and QA documentation
 
----
+## Context management
 
-## State Snapshots
+Load context when it helps the task. Search first, summarize large findings when useful and continue in the current session unless a genuine need for a fresh session exists. Do not impose token-percentage gates, forced pauses or one-plan-per-session rules.
 
-At the end of each wave or significant work block, create a state snapshot:
-
-```markdown
-## Wave N Summary
-
-**Objective:** {what this wave aimed to accomplish}
-
-**Changes:**
-- {change 1}
-- {change 2}
-
-**Files Touched:**
-- {file1}
-- {file2}
-
-**Verification:**
-- {command}: {result}
-
-**Risks/Debt:**
-- {any concerns}
-
-**Next Wave TODO:**
-- {item 1}
-- {item 2}
-```
-
----
-
-## Model Independence
-
-**Absolute Rule**: No rule, workflow, or skill may require a specific model provider.
-
-**Allowed:**
-- Optional adapters with provider-specific enhancements
-- Capability-based recommendations (e.g., "use a reasoning model for planning")
-- Examples mentioning specific models as illustrations
-
-**Forbidden:**
-- Hard dependencies on provider features
-- Breaking behavior when a specific model is unavailable
-- Duplicating canonical rules in adapters
-
-**Adapter Pattern:**
-```
-adapters/
-├── CLAUDE.md    # Optional Claude enhancements
-├── GEMINI.md    # Optional Gemini enhancements
-└── GPT_OSS.md   # Optional GPT/OSS enhancements
-```
-
-Each adapter must begin with:
-> "Everything in this file is optional. For canonical rules, see PROJECT_RULES.md."
-
----
-
-## Commit Conventions
-
-**Format:**
-```
-type(scope): description
-```
-
-**Types:**
-| Type | Usage |
-|------|-------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
-| `refactor` | Code restructure (no behavior change) |
-| `test` | Adding/updating tests |
-| `chore` | Maintenance, dependencies |
-
-**Rules:**
-- One task = one commit
-- Verify before commit
-- Scope = phase number for phase work (e.g., `feat(phase-1): ...`)
-- **Confirm the commit landed** with `git log -1 --oneline` before starting the next task
-- **Never `--allow-empty`** — a task with no tracked change is not complete, and git does not
-  track directories
-
----
-
-## Shell Discipline
-
-**Rule:** one command per invocation. Never chain with `&&` or `||`.
-
-The host shell is not knowable from inside a workflow. Windows PowerShell 5.1 rejects both
-operators with a parse error, so `git add X && git commit -m "..."` does not partially run —
-it does not run at all, while looking like it did.
-
-| Do | Don't |
-|----|-------|
-| `git add -A` then `git commit -m "..."` as two calls | `git add -A && git commit -m "..."` |
-| Read each command's output before the next | Assume success from absence of a visible error |
-| Provide both PowerShell and Bash forms in workflows | Ship a bash-only example as "the" command |
-
-**Why it matters:** a command that never ran produces no error the agent recognises. Work is
-reported as done, the worktree is discarded, and the change is gone.
-
----
-
-## Repository Structure
-
-```
-PROJECT_RULES.md          # ← This file (canonical rules)
-GSD-STYLE.md              # Style and conventions
-
-.agent/
-└── workflows/            # Slash commands (/plan, /execute, etc.)
-
-.agents/
-├── agents/               # Subagent definitions (invoked via invoke_subagent)
-└── skills/               # Agent specializations (Agent Skills standard)
-
-.gemini/                  # Gemini-specific configuration
-.gsd/                     # Project state and artifacts
-├── SPEC.md               # Requirements (must be FINALIZED)
-├── ROADMAP.md            # Phases and progress
-├── STATE.md              # Session memory
-├── templates/            # Document templates
-└── examples/             # Usage examples
-
-adapters/                 # Optional model-specific enhancements
-docs/                     # Operational documentation
-scripts/                  # Utility scripts
-```
-
----
-
-## Context Management
-
-**Context Quality Thresholds:**
-
-| Usage | Quality |
-|-------|---------|
-| 0-30% | **PEAK** — Comprehensive, thorough work |
-| 30-50% | **GOOD** — Solid, confident output |
-| 50-70% | **DEGRADING** — Efficiency mode |
-| 70%+ | **POOR** — Rushed, incomplete |
-
-**Context Hygiene Rules:**
-- Keep plans under 50% context usage
-- Fresh context for each plan execution — enforced by one `gsd-executor` subagent per plan,
-  not by hoping the orchestrator stays tidy
-- After 3 debugging failures → state dump → fresh session
-- STATE.md = memory across sessions
-
----
-
-## Token Efficiency Rules
-
-**Goal:** Minimize token consumption while maintaining output quality.
-
-### Loading Rules
-
-| Action | Rule |
-|--------|------|
-| Before reading file | Search first (grep, ripgrep) |
-| File >200 lines | Use outline, not full file |
-| File already understood | Reference summary, don't reload |
-| >5 files needed | Stop, reconsider approach |
-
-### Budget Thresholds
-
-| Usage | Action Required |
-|-------|-----------------|
-| 0-50% | Proceed normally |
-| 50-70% | Switch to outline mode, compress context |
-| 70%+ | State dump required, recommend fresh session |
-
-### Compression Protocol
-
-After understanding a file:
-1. Create summary in STATE.md or task notes
-2. Reference summary instead of re-reading
-3. Only reload specific sections if needed
-
-### Per-Wave Efficiency
-
-- Start each wave with minimal context
-- Load files just-in-time (when task requires)
-- Compress/summarize before moving to next wave
-- Document token usage in state snapshots (optional)
-
-**Anti-patterns:**
-- Loading files "just in case"
-- Re-reading files already understood
-- Full file reads when snippets suffice
-- Ignoring budget warnings
-
----
-
-## Quick Reference
-
-```
-Before coding    → SPEC.md must be FINALIZED
-Before file read → Search first, then targeted read
-After each task  → Commit + update STATE.md
-After each wave  → State snapshot
-After 3 failures → State dump + fresh session
-Before "Done"    → Empirical proof captured
-```
-
----
-
-*GSD Methodology — Model-Agnostic Edition*
-*Reference implementation for multi-LLM environments*
+## Quick reference
+
+- Ordinary request: one focused plan at most; no automatic phases or subagents.
+- Large milestone: phase it only when requested or when real dependencies require it.
+- Before changes: inspect status, references and relevant code.
+- Before completion: run relevant verification and report actual limits.
+- Before commit: inspect the staged diff and keep local secrets/artifacts out.

@@ -1,3 +1,4 @@
+> **Archived future-deployment draft — not supported or implemented.** No cloud resources, manifests or deployment workflow are provided by this document. It contains aspirational architecture and must not be followed as a tested deployment guide. The supported setup is local Docker Compose.
 # FlagForge — Cloud Deployment
 
 > Cloud deployment guide for FlagForge. The platform uses the same application code and database model as the self-hosted edition. Cloud infrastructure changes how services are hosted, scaled, secured and operated; it does not change the product's core algorithms.

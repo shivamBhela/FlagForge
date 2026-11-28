@@ -1,6 +1,6 @@
 ---
 name: gsd-verifier
-description: Independently validates a completed phase against its must-haves using empirical evidence from the codebase. Invoke from /verify so verification runs on a context that never saw the implementation.
+description: Independently validates a completed phase against its must-haves using empirical evidence from the codebase. Use from /verify when independent context is requested or materially improves confidence.
 tools:
   - view_file
   - write_to_file
@@ -12,7 +12,6 @@ tools:
   - send_message
 subagent: true
 mainAgent: false
-model: pro
 skills:
   - skills/verifier
   - skills/empirical-validation

@@ -12,6 +12,7 @@ def test_production_config_rejects_known_development_secrets(monkeypatch):
     # must evaluate constructor defaults independently of deployment configuration.
     monkeypatch.delenv("SECRET_KEY", raising=False)
     monkeypatch.delenv("ENCRYPTION_KEY", raising=False)
+    monkeypatch.delenv("OTEL_INGEST_TOKEN", raising=False)
     with pytest.raises(ValueError, match="SECRET_KEY"):
         Settings(_env_file=None, APP_ENV="production")
 
@@ -27,6 +28,7 @@ def test_production_config_rejects_known_development_secrets(monkeypatch):
         APP_ENV="production",
         SECRET_KEY="unique-production-secret-key-with-more-than-32-chars",
         ENCRYPTION_KEY=Fernet.generate_key().decode("ascii"),
+        OTEL_INGEST_TOKEN="test-only-otel-ingestion-token-32-bytes",
     )
     assert production.APP_ENV == "production"
 

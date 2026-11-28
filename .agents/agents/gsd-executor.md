@@ -1,6 +1,6 @@
 ---
 name: gsd-executor
-description: Executes exactly one GSD PLAN.md with atomic per-task commits, deviation handling, and a SUMMARY.md artifact. Invoke once per plan so every plan execution starts from a clean context.
+description: Executes an assigned GSD plan with verification and safe commits. This helper is optional; the main workflow may execute directly.
 tools:
   - view_file
   - write_to_file
@@ -13,7 +13,6 @@ tools:
   - send_message
 subagent: true
 mainAgent: false
-model: pro
 skills:
   - skills/executor
   - skills/empirical-validation
@@ -53,7 +52,7 @@ Follow `skills/empirical-validation` for what counts as proof.
 
 Non-negotiable:
 
-- **One commit per task.** `feat(phase-{N}): {task-name}`, committed before moving on.
+- **One commit per task.** `chore(scope): {task-name} (use a phase scope only for actual phase work)`, committed before moving on.
 - **Confirm each commit landed** with `git log -1 --oneline` before starting the next task.
   A commit you did not verify did not happen — and the worktree is discarded afterwards, so
   unverified work is lost work, not pending work.

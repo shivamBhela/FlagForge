@@ -1,6 +1,6 @@
 ---
 name: gsd-planner
-description: Decomposes one roadmap phase into atomic PLAN.md files with wave assignments and verification criteria. Invoke from /plan so plan authoring does not consume the orchestrator's context.
+description: Creates focused, verifiable plans. Use roadmap phases and wave assignments only for an explicitly requested or genuinely large milestone.
 tools:
   - view_file
   - write_to_file
@@ -11,7 +11,6 @@ tools:
   - send_message
 subagent: true
 mainAgent: false
-model: pro
 skills:
   - skills/planner
   - skills/plan-checker
@@ -45,10 +44,10 @@ Follow `skills/planner` for task anatomy and goal-backward decomposition.
 
 Non-negotiable:
 
-- **2-3 tasks per plan. No exceptions.** More scope means more plans, not bigger plans.
-- **Each plan must complete within ~50% of an executor's context.** If it cannot, split it.
+- Keep plans focused. Two or three tasks is a sizing hint, not a hard limit.
+- Keep one focused plan for an ordinary request. Split only when scope, risk, or real dependencies make one plan unclear or unsafe; context estimates are a judgment aid, not a quota.
 - **Every task carries a `<verify>` block** with a runnable command and a done criterion.
-- **Assign `wave` and `depends_on`** in frontmatter. Independent plans share a wave.
+- Add `depends_on` and wave assignments only where real dependencies affect safe ordering. Omit wave metadata when it adds no clarity.
 - **Write from `.gsd/templates/PLAN.md`.** Do not invent a different structure.
 
 # Self-Check Before Returning

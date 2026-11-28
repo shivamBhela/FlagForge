@@ -33,8 +33,8 @@ version=$(cat VERSION 2>/dev/null || echo "unknown")
 CORE WORKFLOW
 ─────────────
 /map              Analyze codebase → ARCHITECTURE.md
-/plan [N]         Create PLAN.md files for phase N
-/execute [N]      Wave-based execution with atomic commits
+/plan [N]         Make one focused plan; pass N for an explicit roadmap phase
+/execute [N]      Execute an explicitly planned phase
 /verify [N]       Must-haves validation with proof
 /debug [desc]     Systematic debugging (3-strike rule)
 
@@ -71,24 +71,24 @@ UTILITIES
 
 QUICK START
 ───────────
-1. /new-project      → Initialize with deep questioning
-2. /plan 1           → Create Phase 1 plans
-3. /execute 1        → Implement Phase 1
-4. /verify 1         → Confirm it works
+1. /new-project      → Initialize project context
+2. /plan             → Make one focused plan by default
+3. Implement and verify the requested work
+4. Use /plan N and /execute N only for a requested or genuinely large milestone
 5. Repeat
 
 ───────────────────────────────────────────────────────
 
 CORE RULES
 ──────────
-🔒 Planning Lock     No code until SPEC.md is FINALIZED
-💾 State Persistence Update STATE.md after every task
-🧹 Context Hygiene   3 failures → state dump → fresh session
+🧭 Use phases only when requested or genuinely needed
+💾 Update STATE.md when substantial project state changes
+🤝 Subagents are optional helpers, never a default requirement
 ✅ Empirical Valid.  Proof required, no "it should work"
 
 ───────────────────────────────────────────────────────
 
-📚 Docs: GSD-STYLE.md, .gsd/examples/
+📚 Docs: docs/development/AI_WORKFLOW_CONVENTIONS.md, .gsd/examples/
 
 ───────────────────────────────────────────────────────
 ```

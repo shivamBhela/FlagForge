@@ -1,12 +1,12 @@
 ---
-description: The Strategist — Decompose requirements into executable phases in ROADMAP.md
-argument-hint: "[phase] [--research] [--skip-research] [--gaps]"
+description: Create one focused plan by default; use roadmap phases only when requested or genuinely needed
+argument-hint: "[phase-number] [--research] [--skip-research] [--gaps]"
 ---
 
 # /plan Workflow
 
 <role>
-You are a GSD planner orchestrator. You create executable phase plans with task breakdown, dependency analysis, and goal-backward verification.
+Create a focused plan for the user request. Use the phase-planning workflow below only when a phase number or large milestone is explicitly requested.
 
 **Core responsibilities:**
 - Parse arguments and validate phase
@@ -17,22 +17,15 @@ You are a GSD planner orchestrator. You create executable phase plans with task 
 </role>
 
 <objective>
-Create executable phase prompts (PLAN.md files) for a roadmap phase with integrated research and verification.
+Default: return one concise, inline plan for the requested work. With an explicit phase number, create or update that phase plan and verify its acceptance criteria.
 
 **Default flow:** Research (if needed) → Plan → Verify → Done
 
-**Why subagents:** Research and planning are the two heaviest context consumers in GSD —
-research reads the codebase, planning reads the spec, roadmap, and research on top of it.
-Both run in `gsd-researcher` / `gsd-planner` subagents so the orchestrator keeps the budget
-it needs to run the rest of the phase. You see the flow between agents; you do not pay for
-their reading.
-
-Requires Antigravity 2.0+ (`invoke_subagent`). Older versions run inline — see
-`.agents/skills/subagent-delegation/SKILL.md`.
+**Optional helper use:** Plan directly by default. Use the researcher or planner agent only when the user requests delegation or a genuinely large milestone benefits from independent work.
 </objective>
 
 <context>
-**Phase number:** $ARGUMENTS (optional — auto-detects next unplanned phase if not provided)
+**Phase number:** $ARGUMENTS. If omitted, return one concise inline plan; do not infer or create the next roadmap phase.
 
 **Flags:**
 - `--research` — Force re-research even if RESEARCH.md exists
@@ -49,11 +42,11 @@ Requires Antigravity 2.0+ (`invoke_subagent`). Older versions run inline — see
 
 <philosophy>
 
-## Solo Developer + Claude Workflow
-You are planning for ONE person (the user) and ONE implementer (Claude).
+## Model-Independent Workflow
+Plan for the user and the available implementer, regardless of model provider.
 - No teams, stakeholders, ceremonies, coordination overhead
 - User is the visionary/product owner
-- Claude is the builder
+- The assistant implements the requested work
 
 ## Plans Are Prompts
 PLAN.md is NOT a document that gets transformed into a prompt.
@@ -72,10 +65,10 @@ PLAN.md IS the prompt. It contains:
 | 50-70% | DEGRADING | Efficiency mode begins |
 | 70%+ | POOR | Rushed, minimal |
 
-**The rule:** Plans should complete within ~50% context. More plans, smaller scope.
+**Sizing guidance:** Keep the plan clear and executable. Do not split work to meet an arbitrary context percentage; split only when scope, risk, or real dependencies justify it.
 
 ## Aggressive Atomicity
-Each plan: **2-3 tasks max**. No exceptions.
+Keep tasks small and verifiable. Two or three tasks is a sizing hint, not a hard limit.
 
 </philosophy>
 
@@ -116,6 +109,14 @@ Discovery is MANDATORY unless you can prove current context exists.
 
 <process>
 
+## Default Route
+
+Without an explicit phase number, return one focused inline plan and stop. Do not require SPEC finalization or create phase/roadmap artifacts for ordinary tasks.
+
+Continue into the phase workflow only when the user supplies a phase number or asks for a large milestone plan.
+
+---
+
 ## 1. Validate Environment (Planning Lock)
 
 **PowerShell:**
@@ -149,7 +150,7 @@ Extract from $ARGUMENTS:
 - `--skip-research` flag
 - `--gaps` flag
 
-**If no phase number:** Detect next unplanned phase from ROADMAP.md.
+**If no phase number:** Return one concise inline plan and stop. Do not create phase, wave or roadmap artifacts. Continue through this phase workflow only when the user explicitly supplies a phase number or requests a large milestone plan.
 
 ---
 
@@ -218,8 +219,9 @@ Display banner:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-**Delegated mode** (`invoke_subagent` available): invoke `gsd-researcher` with workspace mode
-`share`:
+**Optional delegated mode:** only invoke `gsd-researcher` when the user requested delegation
+or separate research materially benefits from an independent context and the tool is available.
+Otherwise perform the research directly. When delegated, use workspace mode `share`:
 
 ```
 mode: research
@@ -249,15 +251,16 @@ Display banner:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-**Delegated mode** (`invoke_subagent` available): invoke `gsd-planner` with workspace mode
-`inherit`:
+**Optional delegated mode:** plan directly by default. Invoke `gsd-planner` only when the user
+requested delegation or the milestone materially benefits from an independent planning context.
+When delegated, use workspace mode `inherit`:
 
 ```
 phase: {N}
 mode: {standard|gaps}
 research_path: .gsd/phases/{phase}/RESEARCH.md   {omit if none}
 
-Write plans from .gsd/templates/PLAN.md. 2-3 tasks each, wave + depends_on in frontmatter.
+Use .gsd/templates/PLAN.md for explicit phase plans. Keep task count appropriate to scope; add wave and dependency fields only when real dependencies require them.
 Self-check with plan-checker before returning.
 Return the compact index from your Return Contract — nothing else.
 ```
@@ -277,10 +280,10 @@ Load:
 
 ### 6b. Decompose into Tasks
 For the phase goal:
-1. Identify all deliverables
-2. Break into atomic tasks (2-3 per plan)
-3. Determine dependencies between tasks
-4. Assign execution waves
+1. Identify the deliverables needed for the requested outcome
+2. Keep a contained task together; split only when scope or real dependencies justify it
+3. Record dependencies where they affect safe ordering
+4. Add wave assignments only when dependency groups make execution clearer
 
 ### 6c. Write PLAN.md Files
 
@@ -290,7 +293,6 @@ Create `$PHASE_DIR/{N}-PLAN.md`:
 ---
 phase: {N}
 plan: 1
-wave: 1
 ---
 
 # Plan {N}.1: {Plan Name}
@@ -401,9 +403,9 @@ Plans:
 
 ───────────────────────────────────────────────────────
 
-▶ Next Up
+▶ Optional next step (if continuing this explicit phase workflow)
 
-/execute {N} — run all plans
+/execute {N} — run the requested phase plans
 
 ───────────────────────────────────────────────────────
 ```
@@ -414,11 +416,11 @@ Plans:
 
 | Type | Use For | Autonomy |
 |------|---------|----------|
-| `auto` | Everything Claude can do independently | Fully autonomous |
+| `auto` | Work the assistant can perform without user action | Fully autonomous |
 | `checkpoint:human-verify` | Visual/functional verification | Pauses for user |
 | `checkpoint:decision` | Implementation choices | Pauses for user |
 
-**Automation-first rule:** If Claude CAN do it, Claude MUST do it. Checkpoints are for verification AFTER automation.
+**Automation-first rule:** Complete authorized work directly when safe and feasible. Checkpoints are for verification AFTER automation.
 
 </task_types>
 

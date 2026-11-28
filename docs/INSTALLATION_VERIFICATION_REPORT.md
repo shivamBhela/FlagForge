@@ -4,6 +4,9 @@
 **Environment:** Existing Windows host with Docker Desktop and the FlagForge repository checkout. A second physical machine was not available.
 
 ## Documented setup audit
+## Latest application QA rerun (2026-11-28)
+
+This 2026-11-26 clean-checkout installation record is historical. The latest application verification is documented in [END_TO_END_TEST_REPORT.md](END_TO_END_TEST_REPORT.md): 10/10 long-running services healthy, both migration jobs exited 0, Alembic head `009_encrypt_webhook_secrets`, backend 46 passed, CLI 12 passed, frontend lint/type/build and npm audit passed, and headed Playwright 1 passed (19.8 seconds test; 25.6 seconds total). Docker Desktop/WSL recovered after restart without removing volumes. The latest run did not reconnect or sync Flagsmith; previous live Staging integration checks remain historical evidence.
 
 - `setup.ps1` creates `.env` only if it does not exist, generates local secrets without displaying them, validates Compose, builds and starts the deployment, and checks health.
 - `.env.example` provides local configuration. Existing `.env` was preserved and never read back into QA output.
